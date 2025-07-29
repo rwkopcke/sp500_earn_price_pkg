@@ -1,0 +1,17 @@
+[project]
+name = "sp500-earn-price-pkg"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "RW Kopcke", email = "rwkopckel@yahoo.com" }
+]
+requires-python = ">=3.12.4"
+dependencies = []
+
+[project.scripts]
+earn-price = "sp500_earn_price_pkg.entry:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
