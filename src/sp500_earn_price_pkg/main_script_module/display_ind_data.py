@@ -9,8 +9,9 @@ import matplotlib.pyplot as plt
 import seaborn as sn
 import numpy as np
 
-from main_script_module import sp_env as sp
-from helper_func_module import display_ind_data_read_df
+from sp500_earn_price_pkg.helper_func_module \
+    import display_ind_data_read_df
+import sp500_earn_price_pkg.config_paths as config
 
 @dataclass(frozen= True)
 class Fixed_values:
@@ -45,8 +46,10 @@ class Fixed_values:
 
 def display_ind():
     
+    # the components of env and fixed are immutable, but env and
+    # fixed, considered as two variables, are mutable
     fixed = Fixed_values()
-    env = sp.params
+    env = config.PARAMS
     
 ## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## ++++++ Read Industry data ++++++++++++++++++++++++++++++++++++++++++

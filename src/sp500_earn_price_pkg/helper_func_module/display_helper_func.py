@@ -4,7 +4,8 @@ import sys
 
 import polars as pl
 
-from helper_func_module import helper_func as hp
+from sp500_earn_price_pkg.helper_func_module \
+    import helper_func as hp
 
 
 def contemp_12m_fwd_proj(df, p_dict, eps, name_proj):

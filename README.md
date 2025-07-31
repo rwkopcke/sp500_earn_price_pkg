@@ -39,61 +39,45 @@
 - https://fred.stlouisfed.org/series/DFII10/chart
 
 ### project file structure
-*/sp500_earn_price % tree
 ```     
-richardkopcke@MacBookPro sp500_earn_price % tree
+... /sp500_earn_price_pkg % tree
 .
-├── __init__.py
-├── exe_earn_price.py
-├── helper_func_module
-│   ├── display_helper_func.py
-│   ├── display_ind_data_read_df.py
-│   ├── display_read_history.py
-│   ├── display_read_proj_dict.py
-│   ├── display_read_record_dict.py
-│   ├── helper_func.py
-│   ├── plot_func.py
-│   ├── plot_ind_func.py
-│   ├── read_data_func.py
-│   ├── update_proj_hist_files.py
-│   ├── update_record.py
-│   ├── update_write_history_and_industry_files.py
-│   ├── update_write_proj_file.py
-│   ├── update_write_proj_files.py
-│   └── update_write_record.py
 ├── input_output
 │   ├── backup_dir
-│   │   ├── backup_ind_df.parquet
-│   │   ├── backup_pe_df_actuals.parquet
-│   │   ├── backup_pe_estimates_df.parquet
-│   │   └── backup_record_dict.json
 │   ├── display_dir
-│   │   ├── eps_page0.pdf
-│   │   ├── eps_page1.pdf
-│   │   ├── eps_page2.pdf
-│   │   ├── eps_page3.pdf
-│   │   ├── eps_page4.pdf
-│   │   ├── eps_page5.pdf
-│   │   └── eps_page6.pdf
 │   ├── input_dir
-│   │   ├── DFII10.xlsx
-│   │   └── sp-500-eps-est 2025 06 17.xlsx
-│   ├── output_dir
-│   │   ├── sp500_ind_df.parquet
-│   │   ├── sp500_pe_df_actuals.parquet
-│   │   └── sp500_pe_df_estimates.parquet
-│   └── record_dict.json
-├── main_script_module
-│   ├── display_data.py
-│   ├── display_ind_data.py
-│   ├── sp_env.py
-│   └── update_data.py
+│   └── output_dir
 ├── pyproject.toml
 ├── README.md
+├── src
+│   └── sp500_earn_price_pkg
+│       ├── __init__.py
+│       ├── config_paths.py
+│       ├── entry.py
+│       ├── helper_func_module
+│       │   ├── __init__.py
+│       │   ├── display_helper_func.py
+│       │   ├── display_ind_data_read_df.py
+│       │   ├── display_read_history.py
+│       │   ├── display_read_proj_dict.py
+│       │   ├── display_read_record_dict.py
+│       │   ├── helper_func.py
+│       │   ├── plot_func.py
+│       │   ├── plot_ind_func.py
+│       │   ├── read_data_func.py
+│       │   ├── update_proj_hist_files.py
+│       │   ├── update_record.py
+│       │   ├── update_write_history_and_industry_files.py
+│       │   ├── update_write_proj_file.py
+│       │   ├── update_write_proj_files.py
+│       │   └── update_write_record.py
+│       └── main_script_module
+│           ├── __init__.py
+│           ├── display_data.py
+│           ├── display_ind_data.py
+│           └── update_data.py
 └── uv.lock
 
-10 directories, 63 files
-richardkopcke@MacBookPro sp500_earn_price % 
 ```
 <br>
 <br>
@@ -109,7 +93,7 @@ richardkopcke@MacBookPro sp500_earn_price %
     - https://fred.stlouisfed.org/series/DFII10/chart
     - In DFII10.xlsx, add real interest rates for dates that match SP's new file dates
 
-3. Run (from sp500_earn_price/) uv run exe_earn_price.py
+3. Run (from sp500_earn_price/) uv run earn-price
 
     - action 0: update_data.py
         - reads files in input_dir/

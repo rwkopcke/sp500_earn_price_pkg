@@ -1,7 +1,8 @@
 import json
 import sys
 
-from helper_func_module import helper_func as hp
+from sp500_earn_price_pkg.helper_func_module \
+    import helper_func as hp
 
 def read(env):
     if env.RECORD_DICT_ADDR.exists():

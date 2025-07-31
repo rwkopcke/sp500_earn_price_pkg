@@ -11,12 +11,17 @@ import gc
 import polars as pl
 import matplotlib.pyplot as plt
 
-from main_script_module import sp_env as sp
-from helper_func_module import plot_func as pf
-from helper_func_module import display_helper_func as dh
-from helper_func_module import display_read_record_dict
-from helper_func_module import display_read_history
-from helper_func_module import display_read_proj_dict
+from sp500_earn_price_pkg.helper_func_module import (
+     display_read_record_dict,
+     display_read_history,
+     display_read_proj_dict
+)
+
+from sp500_earn_price_pkg.helper_func_module \
+    import plot_func as pf
+from sp500_earn_price_pkg.helper_func_module \
+    import display_helper_func as dh
+import sp500_earn_price_pkg.config_paths as config
 
 
 #=================  Global Parameters  ================================
@@ -68,8 +73,10 @@ class Fixed_values_addresses:
 
 def display():
     
+    # the components of env and fixed are immutable, but env and
+    # fixed, considered as two variables, are mutable
     fixed = Fixed_values_addresses()
-    env = sp.params
+    env = config.PARAMS
     
 ## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## +++++++++ Read record_dict, history, proj_dict +++++++++++++++++++++

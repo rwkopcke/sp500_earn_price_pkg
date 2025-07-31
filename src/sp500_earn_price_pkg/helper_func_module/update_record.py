@@ -1,7 +1,8 @@
 import polars as pl
 import json
 
-from helper_func_module import helper_func as hp 
+from sp500_earn_price_pkg.helper_func_module \
+    import helper_func as hp 
 
 
 def update(env, loc_env):
@@ -33,10 +34,11 @@ def update(env, loc_env):
         set(str(f.name) 
             for f in input_sp_dir.glob('sp-500-eps*.xlsx'))
     
-    # if new input data is not complete, return up chain to main    
+    # if no input files, return up chain to main    
     if not input_sp_files_set:
         print('\n============================================')
-        print(f'{input_sp_dir} contains no sp input files')
+        print(f'{input_sp_dir}')
+        print('.  contains no sp input files')
         print(f'Return to menu of actions')
         print('============================================\n')
         return return_empty_objects
@@ -54,12 +56,9 @@ def update(env, loc_env):
             record_dict = json.load(f)
             
     # use blank dict if necessary
-    if ((not address.exists()) | 
-        (not record_dict)):
-        record_dict = {}
+    if (not address.exists()):
         print('\n============================================')
         print(f'No record_dict.json exists at\n{address}')
-        print(f'or record_dict is "falsey"')
         print(f'Initializing record_dict')
         print('============================================\n')
          
@@ -69,8 +68,8 @@ def update(env, loc_env):
                        'prev_used_files': [],
                        'prev_files': []}
         
-    # WRITE: if prev record_dict exists, write backup
     else:
+        # WRITE: if prev record_dict exists, write backup
         with open(backup_address, 'w') as f:
             json.dump(record_dict, f, indent= 4)
         print('\n============================================')
@@ -115,7 +114,7 @@ def update(env, loc_env):
     # one dict for each prev_used_file
     prev_used_files_list = record_dict['prev_used_files']
     if not prev_used_files_list:
-        used_df = pl.DataFrame()
+        used_df = data_df
         prev_used_files_set = set()
         
     else:    
@@ -131,12 +130,12 @@ def update(env, loc_env):
     # in each group, using all cols, sort_by date, select the last row
     # in new_files_list
     
-    used_df = pl.concat([used_df.cast({'date': pl.Date}), 
-                         data_df.select(used_df.columns)],
-                         how= 'vertical')\
-                .group_by(yr_qtr)\
-                .agg(pl.all().sort_by('date').last())\
-                .sort(by= yr_qtr)
+        used_df = pl.concat([used_df.cast({'date': pl.Date}), 
+                            data_df.select(used_df.columns)],
+                            how= 'vertical')\
+                    .group_by(yr_qtr)\
+                    .agg(pl.all().sort_by('date').last())\
+                    .sort(by= yr_qtr)
 
     # and files to be used from the new input files
     used_files_set = set(pl.Series(used_df['file']).to_list())
@@ -152,7 +151,7 @@ def update(env, loc_env):
     record_dict['prev_used_files'] = sorted(
         update_df['update_used_files'],
         reverse= True,
-        key= lambda x: x[yr_qtr])
+        key= lambda x: x['date'])
     
     record_dict['latest_used_file'] = \
         record_dict['prev_used_files'][0]['file']

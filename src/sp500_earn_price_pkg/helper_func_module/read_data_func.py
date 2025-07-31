@@ -12,7 +12,8 @@ import openpyxl.utils.cell as ut_cell
 import polars as pl
 import polars.selectors as cs
 
-from helper_func_module import helper_func as hp
+from sp500_earn_price_pkg.helper_func_module \
+    import helper_func as hp
 
 
 def read_sp_date(wksht,

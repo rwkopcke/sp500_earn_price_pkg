@@ -32,17 +32,22 @@ import polars as pl
 import polars.selectors as cs
 
 from openpyxl import load_workbook
-
-from main_script_module import sp_env as sp
-from helper_func_module import update_record
-from helper_func_module import update_write_history_and_industry_files
-from helper_func_module import update_proj_hist_files
-from helper_func_module import update_write_proj_files
-from helper_func_module import update_write_record
-from helper_func_module import helper_func as hp
-from helper_func_module import read_data_func as rd
-
 from dataclasses import dataclass
+
+from sp500_earn_price_pkg.helper_func_module import (
+    update_record,
+    update_write_history_and_industry_files,
+    update_proj_hist_files,
+    update_write_proj_files,
+    update_write_record
+)
+import sp500_earn_price_pkg.config_paths as config
+
+from sp500_earn_price_pkg.helper_func_module \
+    import helper_func as hp
+from sp500_earn_price_pkg.helper_func_module \
+    import read_data_func as rd
+import sp500_earn_price_pkg.config_paths as config
 
 @dataclass(frozen= True)
 class Fixed_Update_Parameters:
@@ -152,23 +157,25 @@ class Fixed_Update_Parameters:
 
 def update():
     ''' Input files from S&P and Fred may contain new data
-        This .py incorporates new data with data collected previously
-        and
+        This incorporates new data with data collected previously
         Writes the updated DFs to
             sp500_pe_df_actuals.parquet
             sp500_pe_df_estimates.parquet
             sp500_ind_df.parquet
         Records these transactions in
             record_dict.json
+            
+        env: PARMS from config_paths.py
     '''
     
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++              
 ## +++++  set immutable parameters  ++++++++++++++++++++++++++++++++++++++++
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
 
-    # fetch project immutable params specified in sp_env,py
-    env = sp.params
     # fetch update_data (local) immutable params, from class above
+    # the components of env and loc_env are immutable, but env and
+    # loc_env, considered as two variables, are mutable
+    env = config.PARAMS
     loc_env = Fixed_Update_Parameters()
     
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++              
@@ -183,7 +190,7 @@ def update():
     # no new data in the input dir => no update necessary => quit
     if not files_to_read_set:
         print('\n============================================')
-        print('Dates of input data files are "stale"')
+        print('No new input files')
         print('Stop Update and return to menu of actions')
         print('============================================\n')
         return
