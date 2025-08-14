@@ -5,14 +5,14 @@ import polars.selectors as cs
 
 def read(record_dict, yr_qtr_set, env):
     proj_df = pl.DataFrame()
-    if env.OUTPUT_PROJ_ADDR.exists():
-        with env.OUTPUT_PROJ_ADDR.open('r') as f:
+    if env().OUTPUT_PROJ_ADDR.exists():
+        with env().OUTPUT_PROJ_ADDR.open('r') as f:
             proj_df = pl.read_parquet(source= f)
         
     if not proj_df.is_empty():
         print('\n============================================')
         print(f'Read projection dataframe' )
-        print(f'at \n{env.OUTPUT_PROJ_ADDR}')
+        print(f'at \n{env().OUTPUT_PROJ_ADDR}')
         print('============================================\n')
         
         proj_dict = dict()
@@ -26,7 +26,7 @@ def read(record_dict, yr_qtr_set, env):
         
     else:
         print('\n============================================')
-        print(f'No file at \n{env.OUTPUT_PROJ_ADDR}')
+        print(f'No file at \n{env().OUTPUT_PROJ_ADDR}')
         print('Processing ended')
         print('============================================\n')
         sys.exit()

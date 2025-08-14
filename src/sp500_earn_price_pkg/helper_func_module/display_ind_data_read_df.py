@@ -1,10 +1,10 @@
 import polars as pl
 import polars.selectors as cs
 
-def read(env, fixed):
+def read(env):
     # find latest year for actual data
     # do not use only p/e data, 'real_rate' data, eps data
-    ind_df = pl.read_parquet(env.OUTPUT_IND_ADDR)\
+    ind_df = pl.read_parquet(env().OUTPUT_IND_ADDR)\
                .drop(cs.matches('Real_Estate'))\
                .sort(by= 'year')
                

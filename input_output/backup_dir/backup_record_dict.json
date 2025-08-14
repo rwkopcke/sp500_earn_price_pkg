@@ -3,12 +3,12 @@
         "s&p": "https://www.spglobal.com/spdji/en/search/?query=index+earnings&activeTab=all",
         "tips": "https://fred.stlouisfed.org/series/DFII10"
     },
-    "latest_used_file": "sp-500-eps-est 2025 08 06.xlsx",
+    "latest_used_file": "sp-500-eps-est 2025 07 31.xlsx",
     "prev_used_files": [
         {
             "yr_qtr": "2025-Q3",
-            "file": "sp-500-eps-est 2025 08 06.xlsx",
-            "date": "2025-08-06"
+            "file": "sp-500-eps-est 2025 07 31.xlsx",
+            "date": "2025-07-31"
         },
         {
             "yr_qtr": "2025-Q2",
@@ -172,7 +172,6 @@
         }
     ],
     "prev_files": [
-        "sp-500-eps-est 2025 08 06.xlsx",
         "sp-500-eps-est 2025 07 31.xlsx",
         "sp-500-eps-est 2025 07 24.xlsx",
         "sp-500-eps-est 2025 07 11.xlsx",

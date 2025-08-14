@@ -5,16 +5,16 @@ from sp500_earn_price_pkg.helper_func_module \
     import helper_func as hp
 
 def read(env):
-    if env.RECORD_DICT_ADDR.exists():
-        with env.RECORD_DICT_ADDR.open('r') as f:
+    if env().RECORD_DICT_ADDR.exists():
+        with env().RECORD_DICT_ADDR.open('r') as f:
             record_dict = json.load(f)
         print('\n============================================')
-        print(f'Read record_dict from: \n{env.RECORD_DICT_ADDR}')
+        print(f'Read record_dict from: \n{env().RECORD_DICT_ADDR}')
         print('============================================\n')
     else:
         print('\n============================================')
-        print(f'No record_dict in \n{env.RECORD_DICT_ADDR.name}')
-        print(f'at: \n{env.RECORD_DICT_ADDR}')
+        print(f'No record_dict in \n{env().RECORD_DICT_ADDR.name}')
+        print(f'at: \n{env().RECORD_DICT_ADDR}')
         print('Processing ended')
         print('============================================\n')
         sys.exit()

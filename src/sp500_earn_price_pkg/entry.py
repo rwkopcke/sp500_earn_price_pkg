@@ -5,9 +5,25 @@ def main():
     '''
     
     # import main scripts
-    from sp500_earn_price_pkg.main_script_module import update_data
-    from sp500_earn_price_pkg.main_script_module import display_data
-    from sp500_earn_price_pkg.main_script_module import display_ind_data
+    from sp500_earn_price_pkg.main_script_module import (
+        update_data, 
+        display_data,
+        display_ind_data
+    )
+    
+    import sp500_earn_price_pkg as sp
+    
+    # reinitialize the entire dataset?
+    print('''
+          To Reload the entire dataset from Archives,
+          enter reinitialize below. Otherwise, simply
+          update the data with the new information
+          contained in input_output/input_dir/
+          by entering any other response:
+          ''')
+    #reinitialize = input().lower()
+    
+    #sp.config_paths.config(reinitialize)
 
     action_dict = {
         "0": 'Update data from recent S&P and FRED workbooks',

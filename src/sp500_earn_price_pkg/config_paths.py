@@ -12,6 +12,7 @@
 from pathlib import Path
 from dataclasses import dataclass
 
+
 @dataclass(frozen= True)
 class Fixed_locations:
     # source of new data, recorded in the output file
@@ -32,18 +33,17 @@ class Fixed_locations:
 ## ====================================================================
     INPUT_OUTPUT_DIR = BASE_DIR / "input_output"
     
-    # INPUT_DIR = INPUT_OUTPUT_DIR / "input_dir"
-    # see INPUT_DIR = ARCHIVE_DIR below
-    # remove the # before INPUT_DIR below to
-    # completely reinitialize data, using all archived history
-    # in this case, make sure 'DFII10.xlsx' is in ARCHIVE_DIR
-    INPUT_DIR = ARCHIVE_DIR
+    INPUT_DIR = INPUT_OUTPUT_DIR / "input_dir"
+    # to reinitialize all data in the project, using all archived history:
+    #    put # before the statement for INPUT_DIR immed. above
+    #    remove # before INPUT_DIR = ARCHIVE_DIR below
+    #    make sure 'DFII10.xlsx' is in ARCHIVE_DIR
+    #    reverse these steps to return to normal operation
+    # INPUT_DIR = ARCHIVE_DIR
     
     # ensure this file is in INPUT_DIR (see above)
     INPUT_RR_FILE = 'DFII10.xlsx'
     INPUT_RR_ADDR = INPUT_DIR / INPUT_RR_FILE
-    
-    
     
     RECORD_DICT_DIR = INPUT_OUTPUT_DIR
     RECORD_DICT_FILE = "record_dict.json"
@@ -89,8 +89,3 @@ class Fixed_locations:
     DISPLAY_4_ADDR = DISPLAY_DIR / DISPLAY_4
     DISPLAY_5_ADDR = DISPLAY_DIR / DISPLAY_5
     DISPLAY_6_ADDR = DISPLAY_DIR / DISPLAY_6
-
-
-# PARAMS is mutable (e,g, PARAMS = 4)
-# PARAMS.BASE_DIR is not mutable
-PARAMS = Fixed_locations()

@@ -14,7 +14,7 @@ from sp500_earn_price_pkg.helper_func_module \
 import sp500_earn_price_pkg.config_paths as config
 
 @dataclass(frozen= True)
-class Fixed_values:
+class Params:
     # main titles for displays
     PAGE4_SUPTITLE = "\nOperating Price-Earnings Ratios for " +\
         "the Industries Within the S&P 500"
@@ -46,17 +46,13 @@ class Fixed_values:
 
 def display_ind():
     
-    # the components of env and fixed are immutable, but env and
-    # fixed, considered as two variables, are mutable
-    fixed = Fixed_values()
-    env = config.PARAMS
     
 ## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## ++++++ Read Industry data ++++++++++++++++++++++++++++++++++++++++++
 ## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     ind_df, op_e_df, year, DATE_THIS_PROJECTION = \
-        display_ind_data_read_df.read(env, fixed)
+        display_ind_data_read_df.read(config.Fixed_locations)
     
     '''
 # SCATTER PLOTS ++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -119,10 +115,10 @@ def display_ind():
     # plt.tight_layout(pad= 0.5)
     
     fig.suptitle(
-        '\n' + fixed.PAGE4_SUPTITLE,
+        '\n' + Params().PAGE4_SUPTITLE,
         fontsize=13,
         fontweight='bold')
-    fig.supxlabel(f'{fixed.PAGE4_SOURCE}\n ', fontsize= 8)
+    fig.supxlabel(f'{Params().PAGE4_SOURCE}\n ', fontsize= 8)
     
     ax = fig.subplots()
     
@@ -142,7 +138,7 @@ def display_ind():
 )
     plt.xticks(rotation = 30)
     ax.set_ylim(ymin= -50, ymax= 60)
-    ax.set_xlabel(fixed.XLABL, fontweight= 'bold')
+    ax.set_xlabel(Params().XLABL, fontweight= 'bold')
     ax.set_ylabel(' \nprice-earnings ratio', fontweight= 'bold')
     sn.move_legend(ax, 'lower left')
     box = ax.get_position()
@@ -153,9 +149,9 @@ def display_ind():
     # sn.move_legend(ax, 'upper left', bbox_to_anchor= (1, 1))
     
     print('\n============================')
-    print(env.DISPLAY_4_ADDR)
+    print(config.Fixed_locations().DISPLAY_4_ADDR)
     print('============================\n')
-    fig.savefig(str(env.DISPLAY_4_ADDR))
+    fig.savefig(str(config.Fixed_locations().DISPLAY_4_ADDR))
     
     del fig
     del df
@@ -197,7 +193,7 @@ def display_ind():
     cg.figure.subplots_adjust(top=0.87)
     
     cg.figure.suptitle(
-        f' \n{fixed.PAGE5_SUPTITLE}',
+        f' \n{Params().PAGE5_SUPTITLE}',
         fontsize=13,
         fontweight='bold')
     # plt.tight_layout(pad= 0.5)
@@ -245,9 +241,9 @@ def display_ind():
     '''
     
     print('\n============================')
-    print(env.DISPLAY_5_ADDR)
+    print(config.Fixed_locations().DISPLAY_5_ADDR)
     print('============================\n')
-    cg.savefig(str(env.DISPLAY_5_ADDR))
+    cg.savefig(str(config.Fixed_locations().DISPLAY_5_ADDR))
     
     del op_e_cor_df
     del cg
@@ -272,10 +268,10 @@ def display_ind():
     # one plot
     ax = fig.subplots()
     fig.suptitle(
-        '\n' + fixed.PAGE6_SUPTITLE,
+        '\n' + Params().PAGE6_SUPTITLE,
         fontsize= 13,
         fontweight= 'bold')
-    fig.supxlabel(fixed.PAGE4_SOURCE, fontsize= 8)
+    fig.supxlabel(Params().PAGE4_SOURCE, fontsize= 8)
     
     
     # remove pe data, simplify column names
@@ -326,9 +322,9 @@ def display_ind():
               reverse= True)
     
     print('\n============================')
-    print(env.DISPLAY_6_ADDR)
+    print(config.Fixed_locations().DISPLAY_6_ADDR)
     print('============================\n')
-    fig.savefig(str(env.DISPLAY_6_ADDR))
+    fig.savefig(str(config.Fixed_locations().DISPLAY_6_ADDR))
 
     return
     

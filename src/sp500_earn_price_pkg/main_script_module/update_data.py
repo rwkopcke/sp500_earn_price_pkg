@@ -6,7 +6,7 @@
         and writes a record of the files that it has read and writen
         as a dictionary to a .json file
         
-   see sp_env.py
+   see config_paths.py
         for the addresses of the files within this project are declared
         for advice in resetting paths for debugging and for reinitializing
         the project's output files
@@ -21,7 +21,7 @@
         actual data reported by S&P, plus actual values for the 10-year TIPS.
    
    The addresses of documents for this project appear in this program's 
-   project directory: S&P500_PE/sp500_pe/sp_env.py
+   project directory: S&P500_PE/sp500_pe/config_paths.py
 '''
 
 #######################  Parameters  ###################################
@@ -39,7 +39,7 @@ from sp500_earn_price_pkg.helper_func_module import (
     update_write_history_and_industry_files,
     update_proj_hist_files,
     update_write_proj_files,
-    update_write_record
+    update_write_record,
 )
 import sp500_earn_price_pkg.config_paths as config
 
@@ -47,10 +47,9 @@ from sp500_earn_price_pkg.helper_func_module \
     import helper_func as hp
 from sp500_earn_price_pkg.helper_func_module \
     import read_data_func as rd
-import sp500_earn_price_pkg.config_paths as config
 
 @dataclass(frozen= True)
-class Fixed_Update_Parameters:
+class Params:
     ARCHIVE_RR_FILE = False
 
     # data from "ESTIMATES&PEs" wksht
@@ -165,18 +164,9 @@ def update():
         Records these transactions in
             record_dict.json
             
-        env: PARMS from config_paths.py
+        config.Fixed_locations(): paraneters from config_paths.py
     '''
     
-## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++              
-## +++++  set immutable parameters  ++++++++++++++++++++++++++++++++++++++++
-## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-
-    # fetch update_data (local) immutable params, from class above
-    # the components of env and loc_env are immutable, but env and
-    # loc_env, considered as two variables, are mutable
-    env = config.PARAMS
-    loc_env = Fixed_Update_Parameters()
     
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++              
 ## +++++  update records for new files to be read  +++++++++++++++++++++++++
@@ -185,7 +175,7 @@ def update():
     # load record_dict - if record_dist is None, create it
     
     [record_dict, new_files_set, files_to_read_set] = \
-         update_record.update(env, loc_env)
+         update_record.update(Params, config.Fixed_locations)
     
     # no new data in the input dir => no update necessary => quit
     if not files_to_read_set:
@@ -201,51 +191,51 @@ def update():
     
     print('\n================================================')
     print(f'Updating historical data from: {record_dict["latest_used_file"]}')
-    print(f'in directory: \n{env.INPUT_DIR}')
+    print(f'in directory: \n{config.Fixed_locations().INPUT_DIR}')
     print('================================================\n')
     
     ## ACTUAL DATA from existing .parquet file (not yet updated with new data)
     # the rows (qtrs) to be updated are the rows that
     # contain null in the op_eps col => assumes history is not revised
     # put the yr_qtr for rows NOT to be updated in the set rows_no_update
-    if env.OUTPUT_HIST_ADDR.exists():
-        actual_df = pl.read_parquet(env.OUTPUT_HIST_ADDR)
+    if config.Fixed_locations().OUTPUT_HIST_ADDR.exists():
+        actual_df = pl.read_parquet(config.Fixed_locations().OUTPUT_HIST_ADDR)
         
         rows_not_to_update_set = \
             set(pl.Series(actual_df
                           .filter(pl.col('op_eps').is_not_null())
-                          .select(pl.col(loc_env.YR_QTR_NAME)))
+                          .select(pl.col(Params().YR_QTR_NAME)))
                   .to_list())
     else:
         rows_not_to_update_set = {}
     
 ## REAL INTEREST RATES, eoq, from FRED DFII10
-    active_workbook = load_workbook(filename= env.INPUT_RR_ADDR,
+    active_workbook = load_workbook(filename= config.Fixed_locations().INPUT_RR_ADDR,
                                     read_only= True,
                                     data_only= True)
     active_sheet = active_workbook.active
     real_rt_df = rd.fred_reader(active_sheet,
-                                **loc_env.SHT_FRED_PARAMS)
+                                **Params().SHT_FRED_PARAMS)
 
 ## NEW HISTORICAL DATA
     ## WKSHT with new historical values for P and E from new excel file
-    latest_file_addr = env.INPUT_DIR / record_dict["latest_used_file"]
+    latest_file_addr = config.Fixed_locations().INPUT_DIR / record_dict["latest_used_file"]
     active_workbook = load_workbook(filename= latest_file_addr,
                                     read_only= True,
                                     data_only= True)
     # most recent date and prices
-    active_sheet = active_workbook[loc_env.SHT_EST_NAME]
+    active_sheet = active_workbook[Params().SHT_EST_NAME]
 
     # add_df, dates and latest prices, beyond historical data
     name_date, add_df = rd.read_sp_date(active_sheet, 
-                                        **loc_env.SHT_EST_DATE_PARAMS,
+                                        **Params().SHT_EST_DATE_PARAMS,
                                         include_prices= True)
     
     # load new historical data
     # omit rows whose yr_qtr appears in the rows_no_update list
     df = rd.sp_loader(active_sheet,
                       rows_not_to_update_set,
-                      **loc_env.SHT_HIST_PARAMS)
+                      **Params().SHT_HIST_PARAMS)
     
     # if any date is None, halt
     if (name_date is None or
@@ -265,7 +255,7 @@ def update():
     # include rr in add_df
     add_df = add_df.join(real_rt_df, 
                          how="left", 
-                         on=[loc_env.YR_QTR_NAME],
+                         on=[Params().YR_QTR_NAME],
                          coalesce= True)
     
     del real_rt_df
@@ -275,30 +265,30 @@ def update():
 ## MARGINS add to add_df
     margins_df = rd.margin_loader(active_sheet,
                                   rows_not_to_update_set,
-                                  **loc_env.SHT_BC_MARG_PARAMS)
+                                  **Params().SHT_BC_MARG_PARAMS)
     
     add_df = add_df.join(margins_df, 
                          how="left", 
-                         on= loc_env.YR_QTR_NAME,
+                         on= Params().YR_QTR_NAME,
                          coalesce= True)
     
     del margins_df
     gc.collect()
 
 ## QUARTERLY DATA add to add_df
-    active_sheet = active_workbook[loc_env.SHT_QTR_NAME]
+    active_sheet = active_workbook[Params().SHT_QTR_NAME]
 
     # ensure all dtypes (if not string or date-like) are float32
     # some dtype are null when all col entries in short df are null
     qtrly_df = rd.sp_loader(active_sheet,
                             rows_not_to_update_set,
-                            **loc_env.SHT_QTR_PARAMS)\
+                            **Params().SHT_QTR_PARAMS)\
                  .cast({~(cs.temporal() | cs.string()): pl.Float32,
                         cs.datetime(): pl.Date})
     
     add_df = add_df.join(qtrly_df,  
                          how= "left", 
-                         on= [loc_env.YR_QTR_NAME],
+                         on= [Params().YR_QTR_NAME],
                          coalesce= True)
     
     del qtrly_df
@@ -308,17 +298,17 @@ def update():
     # align cols of actual_df with add_df
     # ensure rows do not overlap
     
-    if env.OUTPUT_HIST_ADDR.exists():
+    if config.Fixed_locations().OUTPUT_HIST_ADDR.exists():
         actual_df = pl.concat([add_df.filter(
-                                    ~pl.col(loc_env.YR_QTR_NAME)
+                                    ~pl.col(Params().YR_QTR_NAME)
                                     .is_in(rows_not_to_update_set)),
                                actual_df.select(add_df.columns)
-                                    .filter(pl.col(loc_env.YR_QTR_NAME)
+                                    .filter(pl.col(Params().YR_QTR_NAME)
                                     .is_in(rows_not_to_update_set))],
                                how= 'vertical')\
-                      .sort(by= loc_env.YR_QTR_NAME)
+                      .sort(by= Params().YR_QTR_NAME)
     else:
-        actual_df = add_df.sort(by= loc_env.YR_QTR_NAME)
+        actual_df = add_df.sort(by= Params().YR_QTR_NAME)
     
     del add_df
     gc.collect()
@@ -328,8 +318,8 @@ def update():
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     # read stored data
-    if env.OUTPUT_IND_ADDR.exists():
-        ind_df = pl.read_parquet(env.OUTPUT_IND_ADDR)\
+    if config.Fixed_locations().OUTPUT_IND_ADDR.exists():
+        ind_df = pl.read_parquet(config.Fixed_locations().OUTPUT_IND_ADDR)\
                         .sort(by= 'year', descending= True)
                     
         years_no_update = set(pl.Series(ind_df
@@ -340,28 +330,28 @@ def update():
         years_no_update = []
     
     # find new industry data
-    active_sheet = active_workbook[loc_env.SHT_IND_NAME]
+    active_sheet = active_workbook[Params().SHT_IND_NAME]
     add_ind_df = rd.industry_loader(active_sheet,
                                     years_no_update,
-                                    **loc_env.SHT_IND_PARAMS)
+                                    **Params().SHT_IND_PARAMS)
     # add col with Q4 value of real_int_rate each year from actual_df
     add_ind_df = add_ind_df.join(
-                 actual_df.select([loc_env.YR_QTR_NAME, 'real_int_rate'])
-                          .filter(pl.col(loc_env.YR_QTR_NAME)
+                 actual_df.select([Params().YR_QTR_NAME, 'real_int_rate'])
+                          .filter(pl.col(Params().YR_QTR_NAME)
                                     .map_elements(lambda x: x[-1:]=='4',
                                                 return_dtype= bool))
-                          .with_columns(pl.col(loc_env.YR_QTR_NAME)
+                          .with_columns(pl.col(Params().YR_QTR_NAME)
                                     .map_elements(lambda x: x[0:4],
                                                 return_dtype= str)
                                     .alias('year'))
-                          .drop(loc_env.YR_QTR_NAME),
+                          .drop(Params().YR_QTR_NAME),
                  on= 'year',
                  how= 'left',
                  coalesce= True)\
             .sort(by= 'year', descending= True)\
             .cast({~cs.string() : pl.Float32})
     
-    if env.OUTPUT_IND_ADDR.exists():
+    if config.Fixed_locations().OUTPUT_IND_ADDR.exists():
         years = pl.Series(add_ind_df['year']).to_list()
         ind_df = pl.concat([add_ind_df,
                             ind_df.filter(~pl.col('year')
@@ -379,7 +369,8 @@ def update():
     ind_df = ind_df.cast({cs.float(): pl.Float32,
                           cs.integer(): pl.Int16})
 
-    update_write_history_and_industry_files.write(actual_df, ind_df, env)
+    update_write_history_and_industry_files.write(actual_df, ind_df, 
+                                                  config.Fixed_locations)
     
     del actual_df
     del ind_df
@@ -391,7 +382,7 @@ def update():
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     # fetch history
-    proj_dict = update_proj_hist_files.update(env)
+    proj_dict = update_proj_hist_files.update(config.Fixed_locations)
     
     # Fetch files_to_read from inputs
     # Update proj_dict with info in files_to_read
@@ -401,23 +392,23 @@ def update():
     for file in files_to_read_set:
         # echo file name and address to console
         active_workbook = \
-            load_workbook(filename=  env.INPUT_DIR / file,
+            load_workbook(filename=  config.Fixed_locations().INPUT_DIR / file,
                           read_only= True,
                           data_only= True)
-        active_sheet = active_workbook[loc_env.SHT_EST_NAME]
+        active_sheet = active_workbook[Params().SHT_EST_NAME]
         print(f'\n input file: {file}')    
         
         # projections of earnings
         # read date of projection, no prices or other data
         name_date, _ = \
             rd.read_sp_date(active_sheet,
-                            **loc_env.SHT_EST_PROJ_DATE_PARAMS)
+                            **Params().SHT_EST_PROJ_DATE_PARAMS)
         name_date = name_date.date()
         year_quarter = hp.date_to_year_qtr([name_date])[0]
     
         # load projections for the name_date
         proj_date_df = rd.sp_loader(
-            active_sheet,[],**loc_env.SHT_EST_PROJ_PARAMS)
+            active_sheet,[],**Params().SHT_EST_PROJ_PARAMS)
 
         # if any date is None, abort file and continue
         if (name_date is None or
@@ -442,7 +433,7 @@ def update():
     print('\n====================================================')
     print('Reading input projection files is complete')
     print(f'\t{l - n} new input files read')
-    print(f'\tfrom {env.INPUT_DIR}')
+    print(f'\tfrom {config.Fixed_locations().INPUT_DIR}')
     print(f'\t{n} files not read:')
     print(f'\t{failure_to_read_lst}')
     print('====================================================')
@@ -451,12 +442,13 @@ def update():
 ## +++ write updated proj_dict to parquet file +++++++++++++++++++++++++++++
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    update_write_proj_files.write(proj_dict, new_files_set, env)
+    update_write_proj_files.write(proj_dict, new_files_set, 
+                                  config.Fixed_locations())
         
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## +++++ write record ++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    update_write_record.write(record_dict, env)
+    update_write_record.write(record_dict, config.Fixed_locations())
     
     return
