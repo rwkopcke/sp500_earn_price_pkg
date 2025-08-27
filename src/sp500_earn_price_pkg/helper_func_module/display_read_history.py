@@ -1,22 +1,26 @@
 import sys
 import polars as pl
 
-def read(record_dict, env, params):
+import sp500_earn_price_pkg.config.config_paths as config
+import sp500_earn_price_pkg.config.set_params as param
+# param.Display_param()
+
+def read(record_dict):
     yr_qtr_set = {item['yr_qtr']
                   for item in record_dict['prev_used_files']}
     
-    if env().OUTPUT_HIST_ADDR.exists():
-        with env().OUTPUT_HIST_ADDR.open('r') as f:
+    if config.Fixed_locations().OUTPUT_HIST_ADDR.exists():
+        with config.Fixed_locations().OUTPUT_HIST_ADDR.open('r') as f:
             data_df = pl.read_parquet(source= f,
-                            columns= params().HIST_COL_NAMES)
+                                      columns= param.Display_param().HIST_COL_NAMES)
             
         print('\n============================================')
-        print(f'Read data history from: \n{env().OUTPUT_HIST_ADDR}')
+        print(f'Read data history from: \n{config.Fixed_locations().OUTPUT_HIST_ADDR}')
         print('============================================\n')
     else:
         print('\n============================================')
-        print(f'No data history in: \n{env().OUTPUT_HIST_ADDR.name}')
-        print(f'at: \n{env().OUTPUT_HIST_ADDR}')
+        print(f'No data history in: \n{config.Fixed_locations().OUTPUT_HIST_ADDR.name}')
+        print(f'at: \n{config.Fixed_locations().OUTPUT_HIST_ADDR}')
         print('Processing ended')
         print('============================================\n')
         sys.exit()

@@ -1,10 +1,13 @@
 import polars as pl
 import polars.selectors as cs
 
-def read(env):
+import sp500_earn_price_pkg.config.config_paths as config
+
+
+def read():
     # find latest year for actual data
     # do not use only p/e data, 'real_rate' data, eps data
-    ind_df = pl.read_parquet(env().OUTPUT_IND_ADDR)\
+    ind_df = pl.read_parquet(config.Fixed_locations().OUTPUT_IND_ADDR)\
                .drop(cs.matches('Real_Estate'))\
                .sort(by= 'year')
                

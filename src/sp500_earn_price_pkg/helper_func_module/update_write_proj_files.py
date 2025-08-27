@@ -1,9 +1,11 @@
 import polars as pl
 
-def write(proj_dict, new_files_set, env):
+import sp500_earn_price_pkg.config.config_paths as config
+
+def write(proj_dict, new_files_set):
     '''
         proj_dict: keys, year_quarter of projection
-        env: provides the address for storing the data
+        config.Fixed_locations: provides the address for storing the data
         
         Writes the projection data for each year_quarter
         to a single parquet file. 
@@ -34,7 +36,7 @@ def write(proj_dict, new_files_set, env):
 ## ++++ Save updated proj_hist_df +++++++++++++++++++++++++++++++++++++
 ## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     
-    proj_address = env.OUTPUT_PROJ_ADDR
+    proj_address = config.Fixed_locations.OUTPUT_PROJ_ADDR
 
     # convert proj_dict to df to save with parquet
     # use concat to compensate for diff # of rows in each proj_date_df
@@ -55,13 +57,13 @@ def write(proj_dict, new_files_set, env):
 ## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     # new_files_set is not empty  
     for file in new_files_set:
-        address = env.INPUT_DIR / file
-        new_address = env.ARCHIVE_DIR / file
+        address = config.Fixed_locations().INPUT_DIR / file
+        new_address = config.Fixed_locations().ARCHIVE_DIR / file
         address.rename(new_address)
     print('\n====================================================')
     print('Archived all new input projection files')
-    print(f'moved from {env.INPUT_DIR}')
-    print(f'to         {env.ARCHIVE_DIR}')
+    print(f'moved from {config.Fixed_locations().INPUT_DIR}')
+    print(f'to         {config.Fixed_locations().ARCHIVE_DIR}')
     print('====================================================')
         
     return

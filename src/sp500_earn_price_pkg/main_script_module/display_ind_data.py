@@ -1,6 +1,5 @@
 
 #=================  Global Parameters  ================================
-from dataclasses import dataclass
 import gc
 
 import polars as pl
@@ -11,36 +10,10 @@ import numpy as np
 
 from sp500_earn_price_pkg.helper_func_module \
     import display_ind_data_read_df
-import sp500_earn_price_pkg.config_paths as config
-
-@dataclass(frozen= True)
-class Params:
-    # main titles for displays
-    PAGE4_SUPTITLE = "\nOperating Price-Earnings Ratios for " +\
-        "the Industries Within the S&P 500"
-    PAGE5_SUPTITLE = \
-        "\nCorrelations among Annual Price-Earnings Ratios \nfor " +\
-        "the Industries Within the S&P 500"
-    PAGE6_SUPTITLE = \
-        "\nEach Industry's Share of Total Earnings for the Industries in the S&P 500"
-
-    # str: source footnotes for displays
-    E_DATA_SOURCE = \
-        'https://www.spglobal.com/spdji/en/search/?query=index+earnings&activeTab=all'
-    RR_DATA_SOURCE = '10-year TIPS: latest rate for each quarter,' + \
-        ' Board of Governors of the Federal Reserve System, ' + \
-        '\nMarket Yield on U.S. Treasury Securities at 10-Year' + \
-        ' Constant Maturity, Investment Basis, Inflation-Indexed,' +\
-        '\nfrom Federal Reserve Bank of St. Louis, FRED [DFII10].\n '
-    PAGE4_SOURCE = '\n' + E_DATA_SOURCE + '\n' +\
-        "NB: S&P calculates the index of earnings for the S&P 500 " +\
-        "differently than earnings for the industries.\n" +\
-        "The index of earnings for the S&P 500 usually is more than twice the sum of " +\
-        "earnings for the industries. The S&P 500's P/E is not the " +\
-        "average of the industries' P/Es.\n "
-    PAGE5_SOURCE = '\n' + E_DATA_SOURCE
-
-    XLABL = 'end of year'
+    
+import sp500_earn_price_pkg.config.config_paths as config
+import sp500_earn_price_pkg.config.set_params as param
+# param.Display_ind_param()
 
 # ================  MAIN ==============================================
 
@@ -52,7 +25,7 @@ def display_ind():
 ## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     ind_df, op_e_df, year, DATE_THIS_PROJECTION = \
-        display_ind_data_read_df.read(config.Fixed_locations)
+        display_ind_data_read_df.read()
     
     '''
 # SCATTER PLOTS ++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -115,10 +88,10 @@ def display_ind():
     # plt.tight_layout(pad= 0.5)
     
     fig.suptitle(
-        '\n' + Params().PAGE4_SUPTITLE,
+        '\n' + param.Display_ind_param().PAGE4_SUPTITLE,
         fontsize=13,
         fontweight='bold')
-    fig.supxlabel(f'{Params().PAGE4_SOURCE}\n ', fontsize= 8)
+    fig.supxlabel(f'{param.Display_ind_param().PAGE4_SOURCE}\n ', fontsize= 8)
     
     ax = fig.subplots()
     
@@ -138,7 +111,7 @@ def display_ind():
 )
     plt.xticks(rotation = 30)
     ax.set_ylim(ymin= -50, ymax= 60)
-    ax.set_xlabel(Params().XLABL, fontweight= 'bold')
+    ax.set_xlabel(param.Display_ind_param().XLABL, fontweight= 'bold')
     ax.set_ylabel(' \nprice-earnings ratio', fontweight= 'bold')
     sn.move_legend(ax, 'lower left')
     box = ax.get_position()
@@ -193,7 +166,7 @@ def display_ind():
     cg.figure.subplots_adjust(top=0.87)
     
     cg.figure.suptitle(
-        f' \n{Params().PAGE5_SUPTITLE}',
+        f' \n{param.Display_ind_param().PAGE5_SUPTITLE}',
         fontsize=13,
         fontweight='bold')
     # plt.tight_layout(pad= 0.5)
@@ -268,10 +241,10 @@ def display_ind():
     # one plot
     ax = fig.subplots()
     fig.suptitle(
-        '\n' + Params().PAGE6_SUPTITLE,
+        '\n' + param.Display_ind_param().PAGE6_SUPTITLE,
         fontsize= 13,
         fontweight= 'bold')
-    fig.supxlabel(Params().PAGE4_SOURCE, fontsize= 8)
+    fig.supxlabel(param.Display_ind_param().PAGE4_SOURCE, fontsize= 8)
     
     
     # remove pe data, simplify column names

@@ -1,7 +1,9 @@
 import polars as pl
 
+import sp500_earn_price_pkg.config.config_paths as config
 
-def update(env):
+
+def update():
     '''
         Archive all files in new_files_set
         Read all files in files_to_read_set
@@ -21,10 +23,10 @@ def update(env):
 ## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## ++++ Create proj_dict from proj_hist_df stored in parquet file +++++
 ## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    if env().BACKUP_PROJ_ADDR.exists():
-        with env().BACKUP_PROJ_ADDR.open('rb') as f:
+    if config.Fixed_locations().BACKUP_PROJ_ADDR.exists():
+        with config.Fixed_locations().BACKUP_PROJ_ADDR.open('rb') as f:
             proj_hist_df = pl.read_parquet(f)
-        with env().BACKUP_PROJ_ADDR.open('wb') as f:
+        with config.Fixed_locations().BACKUP_PROJ_ADDR.open('wb') as f:
             proj_hist_df.write_parquet(f)
         proj_dict = proj_hist_df.to_dict(as_series= False)
     else:

@@ -21,45 +21,10 @@ from sp500_earn_price_pkg.helper_func_module \
     import plot_func as pf
 from sp500_earn_price_pkg.helper_func_module \
     import display_helper_func as dh
-import sp500_earn_price_pkg.config_paths as config
-
-
-#=================  Global Parameters  ================================
-from dataclasses import dataclass
-
-@dataclass(frozen= True)
-class Params:
-    # main titles for displays
-    PAGE0_SUPTITLE = " \nPrice-Earnings Ratios for the S&P 500"
-    PROJ_EPS_SUPTITLE = " \nCalendar-Year Earnings per Share for the S&P 500"
-    PAGE2_SUPTITLE = " \nEarnings Margin and Equity Premium for the S&P 500"
-    PAGE3_SUPTITLE = \
-        " \nS&P 500 Forward Earnings Yield, 10-Year TIPS Rate, and Equity Premium"
-
-    # str: source footnotes for displays
-    E_DATA_SOURCE = \
-        'https://www.spglobal.com/spdji/en/search/?query=index+earnings&activeTab=all'
-    RR_DATA_SOURCE = '10-year TIPS: latest rate for each quarter,' + \
-        ' Board of Governors of the Federal Reserve System, ' + \
-        '\nMarket Yield on U.S. Treasury Securities at 10-Year' + \
-        ' Constant Maturity, Investment Basis, Inflation-Indexed,' +\
-        '\nfrom Federal Reserve Bank of St. Louis, FRED [DFII10].'
-    PAGE0_SOURCE = E_DATA_SOURCE
-    PAGE1_SOURCE = E_DATA_SOURCE
-    PAGE2_SOURCE = E_DATA_SOURCE + '\n\n' + RR_DATA_SOURCE
-    PAGE3_SOURCE = E_DATA_SOURCE + '\n\n' + RR_DATA_SOURCE
-
-    # hyopothetical quarterly growth factor future stock prices
-    ROG = .05
-    ROG_AR = int(ROG * 100)
-    ROGQ = (1. + ROG) ** (1/4)
-
-    HIST_COL_NAMES = ['date', 'yr_qtr', 'price', 'op_eps', 'rep_eps',
-                    'op_p/e', 'rep_p/e', '12m_op_eps', '12m_rep_eps',
-                    'op_margin', 'real_int_rate']
-
-    DATA_COLS_RENAME  = {'op_margin': 'margin',
-                        'real_int_rate': 'real_rate'}
+    
+import sp500_earn_price_pkg.config.config_paths as config
+import sp500_earn_price_pkg.config.set_params as param
+# param.Display_param()
 
 
 # ================  MAIN =============================================+
@@ -78,15 +43,13 @@ def display():
 ## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     
     record_dict, date_this_projn, yr_qtr_current_projn = \
-        display_read_record_dict.read(config.Fixed_locations)
+        display_read_record_dict.read()
     
     data_df, yr_qtr_set = \
-        display_read_history.read(record_dict,
-                                  config.Fixed_locations, Params)
+        display_read_history.read(record_dict)
     
     proj_dict, proj_dict_keys_set = \
-        display_read_proj_dict.read(record_dict, yr_qtr_set, 
-                                    config.Fixed_locations)
+        display_read_proj_dict.read(record_dict, yr_qtr_set)
         
 ## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## +++++++++ Display the data +++++++++++++++++++++++++++++++++++++++++
@@ -112,10 +75,10 @@ def display():
     ax = fig.subplot_mosaic([['operating'],
                              ['reported']])
     fig.suptitle(
-        f'{Params().PROJ_EPS_SUPTITLE}\n{date_this_projn}',
+        f'{param.Display_param().PROJ_EPS_SUPTITLE}\n{date_this_projn}',
         fontsize=13,
         fontweight='bold')
-    fig.supxlabel(Params().PAGE0_SOURCE, fontsize= 8)
+    fig.supxlabel(param.Display_param().PAGE0_SOURCE, fontsize= 8)
 
     # subsets of columns for op eps (top panel)
     # use rows that match keys for proj_dict
@@ -169,10 +132,10 @@ def display():
     ax = fig.subplot_mosaic([['operating'],
                              ['reported']])
     fig.suptitle(
-        f'{Params().PAGE0_SUPTITLE}\n{date_this_projn}\n ',
+        f'{param.Display_param().PAGE0_SUPTITLE}\n{date_this_projn}\n ',
         fontsize=13,
         fontweight='bold')
-    fig.supxlabel(Params().PAGE1_SOURCE, fontsize= 8)
+    fig.supxlabel(param.Display_param().PAGE1_SOURCE, fontsize= 8)
     
     # create the top and bottom graphs for op and rep pe
     # new DF with cols for p/e and alt p/e, both using 12m trailing E
@@ -189,11 +152,11 @@ def display():
     p_df = proj_dict[yr_qtr_current_projn]\
                 .select(['yr_qtr', '12m_op_eps'])
     
-    df = dh.page1_df(df, p_df, '12m_op_eps', Params().ROGQ )
+    df = dh.page1_df(df, p_df, '12m_op_eps', param.Display_param().ROGQ )
     
     denom = 'divided by projected earnings'
     legend1 = f'price (constant after {date_this_projn})\n{denom}'
-    legend2 = f'price (increases {Params().ROG_AR}% ar after {date_this_projn})\n{denom}'
+    legend2 = f'price (increases {param.Display_param().ROG_AR}% ar after {date_this_projn})\n{denom}'
     
     df = df.rename({'pe': 'historical',
                'fix_proj_p/e': legend1,
@@ -213,7 +176,7 @@ def display():
     p_df = proj_dict[yr_qtr_current_projn]\
                .select(['yr_qtr', '12m_rep_eps'])
     
-    df = dh.page1_df(df, p_df, '12m_rep_eps', Params().ROGQ )
+    df = dh.page1_df(df, p_df, '12m_rep_eps', param.Display_param().ROGQ )
     
     df = df.rename({'pe': 'historical',
                     'fix_proj_p/e': legend1,
@@ -247,10 +210,10 @@ def display():
                              ['quality'],
                              ['premium']])
     fig.suptitle(
-        f'{Params().PAGE2_SUPTITLE}\n{date_this_projn}\n',
+        f'{param.Display_param().PAGE2_SUPTITLE}\n{date_this_projn}\n',
         fontsize=13,
         fontweight='bold')
-    fig.supxlabel(Params().PAGE2_SOURCE, fontsize= 8)
+    fig.supxlabel(param.Display_param().PAGE2_SOURCE, fontsize= 8)
     
     # create the top and bottom graphs for margins and premiums
     # create working df for op margins (top panel)
@@ -332,10 +295,10 @@ def display():
     ax = fig.subplot_mosaic([['operating'],
                              ['reported']])
     fig.suptitle(
-        f'{Params().PAGE3_SUPTITLE}\n{date_this_projn}\n',
+        f'{param.Display_param().PAGE3_SUPTITLE}\n{date_this_projn}\n',
         fontsize=13,
         fontweight='bold')
-    fig.supxlabel(Params().PAGE3_SOURCE, fontsize= 8)
+    fig.supxlabel(param.Display_param().PAGE3_SOURCE, fontsize= 8)
     
     xlabl = '\nquarter of projection, price, and TIPS rate\n\n'
     ylabl = ' \npercent\n '

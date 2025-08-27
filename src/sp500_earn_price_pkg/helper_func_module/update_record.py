@@ -2,10 +2,14 @@ import polars as pl
 import json
 
 from sp500_earn_price_pkg.helper_func_module \
-    import helper_func as hp 
+    import helper_func as hp
+    
+import sp500_earn_price_pkg.config.config_paths as config
+import sp500_earn_price_pkg.config.set_params as param
+# param.Update_param()
 
 
-def update(params, env):
+def update():
     '''
         Inputs are Path() instances
         Returns 1 dict and 3 sets
@@ -26,33 +30,33 @@ def update(params, env):
     # READ: load names of new data files, return if none
     input_sp_files_set = \
         set(str(f.name) 
-            for f in env().INPUT_DIR.glob('sp-500-eps*.xlsx'))
+            for f in config.Fixed_locations().INPUT_DIR.glob('sp-500-eps*.xlsx'))
     
     # if no input files, return up chain to main    
     if not input_sp_files_set:
         print('\n============================================')
-        print(f'{env().INPUT_DIR}')
+        print(f'{config.Fixed_locations()().INPUT_DIR}')
         print('.  contains no sp input files')
         print(f'Return to menu of actions')
         print('============================================\n')
         return return_empty_objects
     
-    if not env().INPUT_RR_ADDR.exists():
+    if not config.Fixed_locations().INPUT_RR_ADDR.exists():
         print('\n============================================')
-        print(f'{env().INPUT_RR_ADDR} does not exist')
+        print(f'{config.Fixed_locations()().INPUT_RR_ADDR} does not exist')
         print(f'Return to menu of actions')
         print('============================================\n')
         return return_empty_objects
     
     # READ: record_dict
-    if env().RECORD_DICT_ADDR.exists():
-        with open(env().RECORD_DICT_ADDR,'r') as f:
+    if config.Fixed_locations().RECORD_DICT_ADDR.exists():
+        with open(config.Fixed_locations().RECORD_DICT_ADDR,'r') as f:
             record_dict = json.load(f)
             
     # use blank dict if necessary
-    if (not env().RECORD_DICT_ADDR.exists()):
+    if (not config.Fixed_locations().RECORD_DICT_ADDR.exists()):
         print('\n============================================')
-        print(f'No record_dict.json exists at\n{env().RECORD_DICT_ADDR}')
+        print(f'No record_dict.json exists at\n{config.Fixed_locations().RECORD_DICT_ADDR}')
         print(f'Initializing record_dict')
         print('============================================\n')
          
@@ -64,11 +68,11 @@ def update(params, env):
         
     else:
         # WRITE: if prev record_dict exists, write backup
-        with open(env().BACKUP_RECORD_DICT_ADDR, 'w') as f:
+        with open(config.Fixed_locations().BACKUP_RECORD_DICT_ADDR, 'w') as f:
             json.dump(record_dict, f, indent= 4)
         print('\n============================================')
-        print(f'Read record_dict from: \n{env().RECORD_DICT_ADDR}')
-        print(f'Wrote record_dict to: \n{env().BACKUP_RECORD_DICT_ADDR}')
+        print(f'Read record_dict from: \n{config.Fixed_locations().RECORD_DICT_ADDR}')
+        print(f'Wrote record_dict to: \n{config.Fixed_locations().BACKUP_RECORD_DICT_ADDR}')
         print('============================================\n')
         
 # create set of new files that were not previously seen
@@ -81,7 +85,7 @@ def update(params, env):
     if not new_files_set:
         print('\n============================================')
         print(f'No previously unseen files at')
-        print(f'{env().RECORD_DICT_ADDR}')
+        print(f'{config.Fixed_locations().RECORD_DICT_ADDR}')
         print('No data files have been written')
         print('============================================\n')
         return return_empty_objects
@@ -100,11 +104,11 @@ def update(params, env):
                             .alias('date'))\
                 .with_columns(pl.col('date')
                             .map_batches(hp.date_to_year_qtr)
-                            .alias(params().YR_QTR_NAME))
+                            .alias(param.Update_param().YR_QTR_NAME))
     
     # fetch used files list from record_dict
     # prev_used_files_list contains dicts, each with keys
-    # 'file', 'date', params().YR_QTR_NAME
+    # 'file', 'date', param.Update_param().YR_QTR_NAME
     # one dict for each prev_used_file
     prev_used_files_list = record_dict['prev_used_files']
     if not prev_used_files_list:
@@ -127,9 +131,9 @@ def update(params, env):
         used_df = pl.concat([used_df.cast({'date': pl.Date}), 
                             data_df.select(used_df.columns)],
                             how= 'vertical')\
-                    .group_by(params().YR_QTR_NAME)\
+                    .group_by(param.Update_param().YR_QTR_NAME)\
                     .agg(pl.all().sort_by('date').last())\
-                    .sort(by= params().YR_QTR_NAME)
+                    .sort(by= param.Update_param().YR_QTR_NAME)
 
     # and files to be used from the new input files
     used_files_set = set(pl.Series(used_df['file']).to_list())
@@ -150,8 +154,8 @@ def update(params, env):
     record_dict['latest_used_file'] = \
         record_dict['prev_used_files'][0]['file']
     
-    record_dict['sources']['s&p'] = env().SP_SOURCE
-    record_dict['sources']['tips'] = env().REAL_RATE_SOURCE
+    record_dict['sources']['s&p'] = config.Fixed_locations().SP_SOURCE
+    record_dict['sources']['tips'] = config.Fixed_locations().REAL_RATE_SOURCE
     
     return [record_dict, new_files_set, files_to_read_set]
     
