@@ -1,6 +1,6 @@
 # S&P500 earnings yield and 10-year TIPS rate
 #### initiated:  2023 08
-#### current version:  See pyproject.toml
+#### current version:  2025 08
 ### Uses current and historical data
 - index of stock prices for the S&P500
 - operating and reported earnings for the S&P500
@@ -151,7 +151,7 @@ sp500-earn-price-pkg v1.0.0
     - https://fred.stlouisfed.org/series/DFII10/chart
     - In DFII10.xlsx, add real interest rates for dates that match SP's new file dates
 
-3. Run (sp500_earn_price_pkg top level) uv run earn-price
+3. Run (sp500_earn_price_pkg top level) uv run earn-price (launches entry.py)
 
     - action 0: update_data.py
         - reads files in input_dir/
@@ -178,11 +178,11 @@ sp500-earn-price-pkg v1.0.0
 <br>
 
 ## Other Information
-### sp_env.py
+### entry.py
 -  Contains absolute address of ARCHIVE_DIR
     - user must specify location of ARCHIVE_DIR which contains input files after they have been read
 -  Contains addresses for all files relative to the address of the top-level project file
-    - addresses of all folders and files (except the ARCHIVE_DIR) fixed by addr of top-level sp500_earn_price_pkg/
+    - abs addr of top-level sp500_earn_price_pkg/ is the root for addrs of all folders and files (except the ARCHIVE_DIR)
 - uses pathlib's Path()
 
 ### output_dir/
@@ -211,3 +211,9 @@ sp500-earn-price-pkg v1.0.0
     - ensure that DFII10.xlsx in INPUT_DIR has data for all quarters
     - where indicated in sp_env.py uncomment INPUT_DIR = ARCHIVE_DIR
     - after reinitialization, recomment INPUT_DIR = ARCHIVE_DIR
+
+
+#### Future improvements
+- Tidy the logic/code in the scripts
+- Convert the data structure from polars dataframes to a database
+- Add chron feature to fetch new data from each week
