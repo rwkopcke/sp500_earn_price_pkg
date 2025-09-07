@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-@dataclass(frozen= True)
+@dataclass(frozen= True, slots= True)
 class Update_param:
     ARCHIVE_RR_FILE = False
 
@@ -103,7 +103,7 @@ class Update_param:
         'rr_col_name': RR_COL_NAME
     }
 
-@dataclass(frozen= True)
+@dataclass(frozen= True, slots= True)
 class Display_param:
     # main titles for displays
     PAGE0_SUPTITLE = " \nPrice-Earnings Ratios for the S&P 500"
@@ -137,7 +137,7 @@ class Display_param:
     DATA_COLS_RENAME  = {'op_margin': 'margin',
                         'real_int_rate': 'real_rate'}
     
-@dataclass(frozen= True)
+@dataclass(frozen= True, slots= True)
 class Display_ind_param:
     # main titles for displays
     PAGE4_SUPTITLE = "\nOperating Price-Earnings Ratios for " +\

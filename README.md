@@ -98,7 +98,7 @@ sp500-earn-price-pkg v1.0.0
 │   │   └── eps_page6.pdf
 │   ├── input_dir
 │   │   ├── DFII10.xlsx
-│   │   └── sp-500-eps-est 2025 08 20.xlsx
+│   │   └── sp-500-eps-est YYYY MM DD.xlsx
 │   ├── output_dir
 │   │   ├── sp500_ind_df.parquet
 │   │   ├── sp500_pe_df_actuals.parquet
@@ -151,7 +151,7 @@ sp500-earn-price-pkg v1.0.0
     - https://fred.stlouisfed.org/series/DFII10/chart
     - In DFII10.xlsx, add real interest rates for dates that match SP's new file dates
 
-3. Run (sp500_earn_price_pkg top level) uv run earn-price (launches entry.py)
+3. From sp500_earn_price_pkg top level: ```uv run earn-price```
 
     - action 0: update_data.py
         - reads files in input_dir/
@@ -178,10 +178,10 @@ sp500-earn-price-pkg v1.0.0
 <br>
 
 ## Other Information
-### entry.py
+### sp500_earn_price_pkg/config/config_paths.py
 -  Contains absolute address of ARCHIVE_DIR
     - user must specify location of ARCHIVE_DIR which contains input files after they have been read
--  Contains addresses for all files relative to the address of the top-level project file
+-  Contains addresses for all other files relative to the address of the top-level project file
     - abs addr of top-level sp500_earn_price_pkg/ is the root for addrs of all folders and files (except the ARCHIVE_DIR)
 - uses pathlib's Path()
 
@@ -202,15 +202,15 @@ sp500-earn-price-pkg v1.0.0
 <br>
 
 #### To recreate/reinitialize output files from all archived history
-1. see sp_env.py
+1. see src/sp500_earn_price_pkg/config/config_paths.py
 2. debug
-    - ensure that DFII10.xlsx is in input_dir
-    - copy last workbook of estimates, giving it a more recent date
-    - update DFII10 for this new date
+    - ensure that updated DFII10.xlsx is in INPUT_DIR
+    - move the most recent input file from ARCHIVE_DIR to INPUT_DIR
+    - remove the name of the most recent input file from all keys in record_dict.json
 3. reinitialize
     - ensure that DFII10.xlsx in INPUT_DIR has data for all quarters
-    - where indicated in sp_env.py uncomment INPUT_DIR = ARCHIVE_DIR
-    - after reinitialization, recomment INPUT_DIR = ARCHIVE_DIR
+    - in config_paths.py set INPUT_DIR = ARCHIVE_DIR
+    - after reinitialization, reset INPUT_DIR 
 
 
 #### Future improvements

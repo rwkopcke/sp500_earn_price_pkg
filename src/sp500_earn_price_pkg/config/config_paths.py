@@ -13,7 +13,7 @@ from pathlib import Path
 from dataclasses import dataclass
 
 
-@dataclass(frozen= True)
+@dataclass(frozen= True, slots= True)
 class Fixed_locations:
     # source of new data, recorded in the output file
     # '.../sp500_earn_price_pkg/input_output/output_dir/record_dict.json'
