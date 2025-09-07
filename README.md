@@ -214,6 +214,14 @@ sp500-earn-price-pkg v1.0.0
 
 
 #### Future improvements
-- Tidy the logic/code in the scripts
-- Convert the data structure from polars dataframes to a database
+- Tidy the logic/code in the scripts, incl separating functions in code
+    - validate input files
+    - check for new data
+    - add 1-yr cm TIPS rate
+    - add new page of equity premiums using 1-yr TIPS & projected E/P
+- Convert the data structure from polars dataframes to duckdb
+    - do not reload existing data from db
+    - only insert new rows and tables
 - Add chron feature to fetch new data from each week
+    - fetch s&p .xlsx files with renaming
+    - fetch corresponding data from Fred 
