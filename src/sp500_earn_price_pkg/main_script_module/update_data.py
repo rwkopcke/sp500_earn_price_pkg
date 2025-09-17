@@ -47,8 +47,6 @@ from sp500_earn_price_pkg.helper_func_module \
 
 import sp500_earn_price_pkg.config.config_paths as config
 import sp500_earn_price_pkg.config.set_params as param
-# param.Update_param()
-
 
 
 #######################  MAIN Function  ###############################
