@@ -100,7 +100,8 @@ def update():
                            schema= ["file"],
                            orient= 'row')\
                 .with_columns(pl.col('file')
-                            .map_batches(hp.string_to_date)
+                            .map_batches(hp.string_to_date,
+                                         return_dtype= pl.Date)
                             .alias('date'))\
                 .with_columns(pl.col('date')
                             .map_batches(hp.date_to_year_qtr)

@@ -53,7 +53,8 @@ def page0_df(df, p_dict, p_dict_columns, name_act):
     hf = df.select(pl.col(name_act),
                    pl.col('yr_qtr'))\
                 .filter(pl.col('yr_qtr')
-                        .map_batches(hp.is_quarter_4))\
+                        .map_batches(hp.is_quarter_4,
+                                     return_dtype= pl.Boolean))\
                 .join(df,
                       how= 'right',
                       on= 'yr_qtr',
@@ -84,9 +85,11 @@ def page0_df(df, p_dict, p_dict_columns, name_act):
         pro_df = p_dict[yrqtr]\
                     .select(p_dict_columns)\
                     .filter(pl.col('yr_qtr')
-                            .map_batches(hp.is_quarter_4))\
+                            .map_batches(hp.is_quarter_4,
+                                         return_dtype= pl.Boolean))\
                     .with_columns(pl.col('yr_qtr')
-                                      .map_batches(hp.yrqtr_to_yr)
+                                      .map_batches(hp.yrqtr_to_yr,
+                                                   return_dtype= pl.String)
                                       .alias('year'),
                                   pl.lit(yrqtr).alias('yr_qtr'))\
                     .filter((pl.col('year') >= yrqtr[:4]))
