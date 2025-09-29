@@ -3,7 +3,7 @@
    and from the 10-year TIPS rate from FRED: 
         https://fred.stlouisfed.org/series/DFII10
    It writes these data as polars dataframes to .parquet files
-        and writes a record of the files that it has read and writen
+        and writes a record of the files that it has writen
         as a dictionary to a .json file
         
    see config_paths.py
@@ -25,7 +25,6 @@
 '''
 
 #######################  Parameters  ###################################
-import sys
 import gc
 
 import polars as pl
@@ -46,87 +45,150 @@ from sp500_earn_price_pkg.helper_func_module \
     import read_data_func as rd
 
 import sp500_earn_price_pkg.config.config_paths as config
-import sp500_earn_price_pkg.config.set_params as param
+import sp500_earn_price_pkg.config.set_params as params
+
+import sp500_earn_price_pkg.config.set_params as params
+param = params.Update_param()
 
 
 #######################  MAIN Function  ###############################
 
 def update():
-    ''' Input files from S&P and Fred may contain new data
-        This incorporates new data with data collected previously
-        Writes the updated DFs to
+    ''' Check Input files from S&P and Fred for new data
+        Insert any new data into existing history
+        Write the updates to
             sp500_pe_df_actuals.parquet
             sp500_pe_df_estimates.parquet
             sp500_ind_df.parquet
-        Records these transactions in
+        Record these transactions in
             record_dict.json
             
         config.Fixed_locations(): paraneters from config_paths.py
     '''
     
+## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## +++++  ensure sp input files exist and are named consistently  +++++++++
+## +++++   format of std name: sp-500-eps DATE_FMT_SP_FILE    +++++++++++++
+## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+    sp_input_files_set = \
+        rd.files_valid(config.Fixed_locations().INPUT_DIR,
+                       config.Fixed_locations().INPUT_SP_FILE_GLOB_STR,
+                       config.Fixed_locations().INPUT_RR_FILE)
+    
+    if not sp_input_files_set:
+        hp.message([
+            'no valid input files, see messages above'
+            ])
+        return
+    
+    sp_input_files_set = \
+        rd.ensure_consistent_names(
+            config.Fixed_locations().INPUT_DIR,
+            sp_input_files_set)
     
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++              
-## +++++  update records for new files to be read  +++++++++++++++++++++++++
-## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
+## +++++  update record_dict for new files  ++++++++++++++++++++++++++++++++
+## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    # load record_dict - if record_dist is None, create it
-    
+# A. retrieve, uses, and save all dates as datetime.date() objects
+
+# 1. load record dict <replace full history of files read with full history of yr_qtr>
+# 2. check Input sp files for new data
+# 3. load history, returning actual df [read_parquet]
+# 4. set rows to update [new rows: set of all dates less set not to update]
+# 5. add_df: e data in rows to update
+# 6. load margins for rows to update [read_xl]
+# 7. add to add_df
+# 8. load qtrly data for rows to update [read_xl]
+# 9. add to add_df
+#10. load rr data for dates in rows to update [read_xl]
+#11. add to add_df
+#12. concate history rows not to update with add_df
+#13. write new history to parquet [write_parquet]
+#    update record dict
+#       latest dt.date for xlsx used
+#       latest yr_qtr for xlsx used
+#       latest yr_qtr with actual op_eps data
+#+++++++++++++++++++++++++++++++++++++++++++++++++++
+#14. load historical ind data, returning actual df [read_parquet]
+#15. set rows to update
+#16. add_df: ind data for rows to update [read_xls]
+#17. concat
+#18. write [write_parquet]
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++
+#19. create message function in hp.message(*args: list of strings
+
+    # fetch record_dict - if record_dist is None, create it
+    record_dict = update_record.fetch()
+         
+    # update record_dict for new_files_set and files_to_read_set
     [record_dict, new_files_set, files_to_read_set] = \
-         update_record.update()
+         update_record.update(record_dict, sp_input_files_set)
     
-    # no new data in the input dir => no update necessary => quit
     if not files_to_read_set:
-        print('\n============================================')
-        print('No new input files')
-        print('Stop Update and return to menu of actions')
-        print('============================================\n')
+        hp.message([
+            'No new input files',
+            'Stop Update and return to menu of actions'
+        ])
         return
+    
+    quit()
 
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++              
 ## +++++  fetch historical aggregate data  +++++++++++++++++++++++++++++++++
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
     
-    print('\n================================================')
-    print(f'Updating historical data from: {record_dict["latest_used_file"]}')
-    print(f'in directory: \n{config.Fixed_locations().INPUT_DIR}')
-    print('================================================\n')
+    hp.message([
+        f'Update historical data from: {record_dict['latest_file']['file']}',
+        f'in directory: \n{config.Fixed_locations().INPUT_DIR}'
+    ])
     
     ## ACTUAL DATA from existing .parquet file (not yet updated with new data)
     # the rows (qtrs) to be updated are the rows that
     # contain null in the op_eps col => assumes history is not revised
-    # put the yr_qtr for rows NOT to be updated in the set rows_no_update
+    # rows_no_update_set: yr_qtr values for rows NOT to be updated
     if config.Fixed_locations().OUTPUT_HIST_ADDR.exists():
-        actual_df = pl.read_parquet(config.Fixed_locations().OUTPUT_HIST_ADDR)
+        actual_df = \
+            pl.read_parquet(config.Fixed_locations().OUTPUT_HIST_ADDR)
         
         rows_not_to_update_set = \
             set(pl.Series(actual_df
-                          .filter(pl.col('op_eps').is_not_null())
-                          .select(pl.col(param.Update_param().YR_QTR_NAME)))
+                    .filter(pl.col('op_eps').is_not_null())
+                    .select(pl.col(param.Update_param().YR_QTR_NAME)))
                   .to_list())
     else:
         rows_not_to_update_set = {}
     
 ## REAL INTEREST RATES, eoq, from FRED DFII10
-    active_workbook = load_workbook(filename= config.Fixed_locations().INPUT_RR_ADDR,
-                                    read_only= True,
-                                    data_only= True)
-    active_sheet = active_workbook.active
+    active_workbook = \
+        load_workbook(filename= config.Fixed_locations().INPUT_RR_ADDR,
+                      read_only= True,
+                      data_only= True)
+    active_sheet = active_workbook[param.Update_param().SHT_RR_NAME]
     real_rt_df = rd.fred_reader(active_sheet,
                                 **param.Update_param().SHT_FRED_PARAMS)
 
 ## NEW HISTORICAL DATA
     ## WKSHT with new historical values for P and E from new excel file
-    latest_file_addr = config.Fixed_locations().INPUT_DIR / record_dict["latest_used_file"]
+    latest_file_addr = \
+        config.Fixed_locations().INPUT_DIR / record_dict["latest_file"]['file']
     active_workbook = load_workbook(filename= latest_file_addr,
                                     read_only= True,
                                     data_only= True)
     # most recent date and prices
     active_sheet = active_workbook[param.Update_param().SHT_EST_NAME]
 
-    # add_df, dates and latest prices, beyond historical data
-    name_date, add_df = rd.read_sp_date(active_sheet, 
-                                        **param.Update_param().SHT_EST_DATE_PARAMS,
-                                        include_prices= True)
+    # add_df, dates and latest prices, beyond existing historical data
+    date_of_sheet = \
+        rd.read_sheet_date(active_sheet, param.Update_param().DATE_KEYS,
+                           "A", 1)
+    
+    
+    add_df = \
+        rd.read_sp_date(active_sheet, 
+                        **param.Update_param().SHT_EST_DATE_PARAMS,
+                        include_prices= True)
     
     # load new historical data
     # omit rows whose yr_qtr appears in the rows_no_update list
@@ -134,17 +196,17 @@ def update():
                       rows_not_to_update_set,
                       **param.Update_param().SHT_HIST_PARAMS)
     
-    # if any date is None, halt
+    # if any date is None, quit
     if (name_date is None or
         any([item is None
             for item in add_df['date']])):
         
-        print('\n============================================')
-        print(f'{latest_file_addr} \nmissing history date')
-        print(f'Name_date: {name_date}')
-        print(actual_df['date'])
-        print('============================================\n')
-        sys.exit()
+        hp.message([
+            f'{latest_file_addr} \nmissing history date',
+            f'Name_date: {name_date}',
+            actual_df['date']
+        ])
+        quit()
         
     # update add_df with new historical data
     add_df = pl.concat([add_df, df], how= "diagonal")
@@ -196,13 +258,14 @@ def update():
     # ensure rows do not overlap
     
     if config.Fixed_locations().OUTPUT_HIST_ADDR.exists():
-        actual_df = pl.concat([add_df.filter(
-                                    ~pl.col(param.Update_param().YR_QTR_NAME)
-                                    .is_in(rows_not_to_update_set)),
-                               actual_df.select(add_df.columns)
-                                    .filter(pl.col(param.Update_param().YR_QTR_NAME)
-                                    .is_in(rows_not_to_update_set))],
-                               how= 'vertical')\
+        actual_df = \
+            pl.concat([add_df.filter(
+                               ~pl.col(param.Update_param().YR_QTR_NAME)
+                               .is_in(rows_not_to_update_set)),
+                        actual_df.select(add_df.columns)
+                                .filter(pl.col(param.Update_param().YR_QTR_NAME)
+                                .is_in(rows_not_to_update_set))],
+                        how= 'vertical')\
                       .sort(by= param.Update_param().YR_QTR_NAME)
     else:
         actual_df = add_df.sort(by= param.Update_param().YR_QTR_NAME)
@@ -273,7 +336,7 @@ def update():
     gc.collect()
     
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++              
-## +++++ fetch current projections & archive all proj input files  +++++++++
+## +++++ fetch projections & archive all proj input files  +++++++++++++++++
 ## +++ proj_dict: yr_qtr keys & df of proj as values +++++++++++++++++++++++
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -309,10 +372,10 @@ def update():
         # if any date is None, abort file and continue
         if (name_date is None or
             None in proj_date_df['date']):
-            print('\n============================================')
-            print('In main(), projections:')
-            print(f'Skipped sp-500 {name_date} missing projection date')
-            print('============================================\n')
+            hp.message([
+                'In main(), projections:',
+                f'Skipped sp-500 {name_date} missing projection date'
+            ])
             failure_to_read_lst.append(file)
             continue
         
@@ -326,13 +389,13 @@ def update():
     # Print housekeeping summary for files_to_read
     l = len(files_to_read_set)
     n = len(failure_to_read_lst)
-    print('\n====================================================')
-    print('Reading input projection files is complete')
-    print(f'\t{l - n} new input files read')
-    print(f'\tfrom {config.Fixed_locations().INPUT_DIR}')
-    print(f'\t{n} files not read:')
-    print(f'\t{failure_to_read_lst}')
-    print('====================================================')
+    hp.message([
+        'Reading input projection files is complete',
+        f'\t{l - n} new input files read',
+        f'\tfrom {config.Fixed_locations().INPUT_DIR}',
+        f'\t{n} files not read:',
+        f'\t{failure_to_read_lst}'
+    ])
         
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## +++ write updated proj_dict to parquet file +++++++++++++++++++++++++++++

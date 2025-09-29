@@ -75,7 +75,7 @@ def display():
     ax = fig.subplot_mosaic([['operating'],
                              ['reported']])
     fig.suptitle(
-        f'{param.Display_param().PROJ_EPS_SUPTITLE}\n{date_this_projn}',
+        f'{param.Display_param().PAGE0_SUPTITLE}\n{date_this_projn}',
         fontsize=13,
         fontweight='bold')
     fig.supxlabel(param.Display_param().PAGE0_SOURCE, fontsize= 8)
@@ -132,7 +132,7 @@ def display():
     ax = fig.subplot_mosaic([['operating'],
                              ['reported']])
     fig.suptitle(
-        f'{param.Display_param().PAGE0_SUPTITLE}\n{date_this_projn}\n ',
+        f'{param.Display_param().PAGE1_SUPTITLE}\n{date_this_projn}\n ',
         fontsize=13,
         fontweight='bold')
     fig.supxlabel(param.Display_param().PAGE1_SOURCE, fontsize= 8)

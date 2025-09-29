@@ -21,10 +21,23 @@ class Fixed_locations:
         "https://www.spglobal.com/spdji/en/search/?query=index+earnings&activeTab=all"
     REAL_RATE_SOURCE = "https://fred.stlouisfed.org/series/DFII10"
     
+    # keys without values for record_dict
+    RECORD_DICT_TEMPLATE = \
+        {'sources': {'s&p': '',             
+                     'tips': ''},
+        'latest_file': {"yr_qtr": '',
+                        "file": '',
+                        "date": ''},       # value is str, json not accept date
+        'quarters in record': [],
+        'prev_used_files': {"yr_qtr": '',
+                            "file": '',
+                            "date": ''}    # value is str, json not accept date
+        }
+    
     # root for project, top-level proj directory
     BASE_DIR = Path.cwd()
     
-    # fixed address, not in project's dir
+    # fixed address, not in project's directory
     ARCHIVE_DIR = \
     Path('/Users/richardkopcke/Dropbox/Stock Analysis/sp_data_archive')
     
@@ -48,6 +61,8 @@ class Fixed_locations:
     RECORD_DICT_DIR = INPUT_OUTPUT_DIR
     RECORD_DICT_FILE = "record_dict.json"
     RECORD_DICT_ADDR = RECORD_DICT_DIR / RECORD_DICT_FILE
+    
+    INPUT_SP_FILE_GLOB_STR = 'sp-500*.xlsx'
     
     OUTPUT_DIR = INPUT_OUTPUT_DIR / "output_dir"
     

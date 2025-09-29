@@ -5,57 +5,69 @@
    access these values in other modules by
         import sp500_pe.helper_func as hp
 '''
-import sys
 from datetime import datetime
-
-import openpyxl.utils.cell as ut_cell
 import polars as pl
 
+import sp500_earn_price_pkg.config.set_params as params
+rd_param = params.Update_param()
 
-def my_df_print(df, n_rows=30):
+
+def message(msg):
     '''
-        custom print df function to format data
-    '''                                
-    with pl.Config(
-        tbl_cell_numeric_alignment="RIGHT",
-        thousands_separator=",",
-        float_precision=1,
-        tbl_rows = n_rows
-    ):
-        print(df)
-    return
-        
-        
-def dt_str_to_date(item):
+        template for printing msg, a list of strings to terminal,
+        one string per line.
+        returns nothing
     '''
-        input either str or datetime obj
-        if str, convert to datetime obj
-        return datetime value
+    bd = '\n========================================================================'
+    print(bd)
+    for line in msg:
+        print(line)
+    bd = '========================================================================\n'
+    print(bd)
+    
+
+def is_date(val):
+    '''
+        if val is either a 
+            datetime object or 
+            str, rd_param.DATE_FMT_SP_ITEM
+        return [True, datetime.date obj]
+        
+        Otherwise, return [False, ""]
     '''
     
-    if isinstance(item, str):
-        # fetch just the date component of str
-        dt = item.split(" ")[0]
-        dt = datetime.strptime(dt,'%m/%d/%Y')
-    else:
-        dt = item
-    return dt
+    if (isinstance(val, datetime)):
+        return [True, val.date()]
+    
+    # if val contains valid str date, convert to datetime
+    if isinstance(val, str):
+        val = val.split(" ")[0]     # reomove trailing notes
+        val = "".join([c for c in val 
+                       if ((c.isdigit()) or
+                           (c == rd_param.DATE_SP_ITEM_SEP))])
+        try:
+            return [True,
+                    datetime.strptime(
+                        val, 
+                        rd_param.DATE_FMT_SP_ITEM)
+                    .date()]
+        except:
+            return [False, ""]
+    
         
-
-def string_to_date(series):
+def file_to_date(series):
     '''
-        converts file names
         receives pl.Series (col from df), str file names
-        extracts the date string, "yyyy mm dd",
-        returns the string to date object, as pl.Series
+        extracts the date string, rd_param.DATE_FMT_SP_FILE,
+        returns: date object, as pl.Series
     '''
-    # splits f_name into two words,
-    # the first and the rest
-    # then splits the .xlsx from the rest
-    return pl.Series([datetime.strptime((f_name.split(' ', 1)[1])
-                                               .split('.', 1)[0], 
-                                        '%Y %m %d').date()
-                      for f_name in series])
+    # isolate the date str in f_name then -> date
+    return pl.Series(
+        [datetime.strptime((f_name.split(' ', 1)[1])
+                               .split('.', 1)[0], 
+                           rd_param.DATE_FMT_SP_FILE).date()
+         for f_name in series]
+    )
     
     
 def date_to_year_qtr(series):
@@ -83,109 +95,18 @@ def is_quarter_4(series):
     
     
 def yrqtr_to_yr(series):
-    '''series of strings y-q in,
-       series of strings y out
+    '''
+        series of strings y-q in,
+        series of strings y out
     '''
     return pl.Series([yq[:4]
                       for yq in series])
-    
-
-def find_key_row(wksht, search_col, start_row, key_values= None,
-                 is_stop_row= False):
-    '''
-        for key_values (either None or a list),
-        find cell containing (one of) the specified key(s)
-        crawl down search col; return the row number of the first match
-        this row_number typically exceeds the last row to read by +1
-    '''
-    
-    # cap the number of rows to read
-    max_to_read = wksht.max_row
-    
-    row_number = start_row
-    while row_number < max_to_read:
-        item = wksht[f'{search_col}{row_number}'].value
-        
-        # None is a default key value for ending the search
-        # if not none, then check explicit key_values
-        if is_stop_row:
-            if item_matches_key(item, None):
-                return row_number
-        
-        if item_matches_key(item, key_values):
-            return row_number
-        row_number += 1                                                     
-    return 0
-
-def item_matches_key(item, keys):
-    '''
-        keys are either None or list of str
-        check if item matches (one of) the key(s)
-        return bool: T if match, F otherwise
-    '''
-    
-    if (keys is None):
-        # item is None? return T(match) or F(no match)
-        return item is None
-    
-    # if item is not a str, it cannot match a key
-    if not (type(item) is str):
-        return False
-    
-    # item is str, keys must be a list of strs
-    # if keys singleton, convert to list
-    if isinstance(keys, str):
-        keys = list(keys)
-    
-    # is item in keys?
-    try:
-        if all(isinstance(y, str) for y in keys):
-            # T(match in keys) or F(no match in keys)
-            return item in keys
-    # in case iter (keys) creates an error
-    except TypeError:
-        pass
-    print('\n============================================')
-    print(f'In helper_func.py, item_matches_key(item, keys)')
-    print(f'item: {item}')
-    print(f'keys: {keys}, is not a list of strings')
-    print('============================================\n')
-    sys.exit()
 
 
-def find_key_col(wksht, search_row, start_col= 1, key_value= None):
+def gen_sub_df(df, ind_name, suffix, col_select, years):
     '''
-        crawl along search_row to
-        find cell containing the specified key,
-        start_col is a number, 1-based index of the column's letter
-            col A is 1, not 0.
-        return number of col: col.value matches key_value
+        describe
     '''
-    
-    # cap the number of rows to read
-    max_to_read = wksht.max_column
-    
-    col_numb = start_col
-   
-    while col_numb < max_to_read + 1:
-        # convert col number to letter
-        col_ltr = ut_cell.get_column_letter(col_numb)
-        item = wksht[f'{col_ltr}{search_row}'].value
-        
-        if item_matches_key(item, key_value):
-            break
-        col_numb += 1
-    
-    if col_numb in [max_to_read, 1]:
-        print('\n Key column is either first col or is not present')
-        print(f'{wksht}, {search_row}, {start_col}, {key_value}')
-        sys.exit()
-                                                                  
-    return col_numb
-
-
-def gen_sub_df(df, ind_name, suffix, 
-               col_select, years):
 
     # construct list of industries: "row index"
     cols = [item + suffix
@@ -204,4 +125,18 @@ def gen_sub_df(df, ind_name, suffix,
            .unpivot(index= 'IND', variable_name= 'year')\
            .pivot(on= 'IND', values= 'value')
     return gf
+
+
+def my_df_print(df, n_rows=30):
+    '''
+        custom print df function to format data
+    '''                                
+    with pl.Config(
+        tbl_cell_numeric_alignment="RIGHT",
+        thousands_separator=",",
+        float_precision=1,
+        tbl_rows = n_rows
+    ):
+        print(df)
+    return
     

@@ -12,18 +12,6 @@ def main():
     )
     
     import sp500_earn_price_pkg as sp
-    
-    # reinitialize the entire dataset?
-    print('''
-          To Reload the entire dataset from Archives,
-          enter reinitialize below. Otherwise, simply
-          update the data with the new information
-          contained in input_output/input_dir/
-          by entering any other response:
-          ''')
-    #reinitialize = input().lower()
-    
-    #sp.config_paths.config(reinitialize)
 
     action_dict = {
         "0": 'Update data from recent S&P and FRED workbooks',
@@ -34,7 +22,7 @@ def main():
     # request actions from user (cli)
     while True:
         
-        print('\n' * 3)
+        print('\n' * 2)
         for key in action_dict.keys():
             print(f'{key}: {action_dict[key]}')
 

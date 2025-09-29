@@ -1,6 +1,8 @@
 import polars as pl
 
 import sp500_earn_price_pkg.config.config_paths as config
+from sp500_earn_price_pkg.helper_func_module \
+    import helper_func as hp
 
 def write(proj_dict, new_files_set):
     '''
@@ -60,10 +62,10 @@ def write(proj_dict, new_files_set):
         address = config.Fixed_locations().INPUT_DIR / file
         new_address = config.Fixed_locations().ARCHIVE_DIR / file
         address.rename(new_address)
-    print('\n====================================================')
-    print('Archived all new input projection files')
-    print(f'moved from {config.Fixed_locations().INPUT_DIR}')
-    print(f'to         {config.Fixed_locations().ARCHIVE_DIR}')
-    print('====================================================')
+    hp.message([
+        'Archived all new input projection files',
+        f'moved from {config.Fixed_locations().INPUT_DIR}',
+        f'to         {config.Fixed_locations().ARCHIVE_DIR}'
+    ])
         
     return

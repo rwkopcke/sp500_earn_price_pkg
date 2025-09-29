@@ -3,6 +3,11 @@ from dataclasses import dataclass
 @dataclass(frozen= True, slots= True)
 class Update_param:
     ARCHIVE_RR_FILE = False
+    
+    # format for dates as str in sp xlsx file names
+    DATE_FMT_SP_FILE = '%Y-%m-%d'
+    DATE_FMT_SP_ITEM = '%d/%m/%Y'
+    DATE_SP_ITEM_SEP = '/'
 
     # data from "ESTIMATES&PEs" wksht
     RR_COL_NAME = 'real_int_rate'
@@ -10,6 +15,7 @@ class Update_param:
     PREFIX_OUTPUT_FILE_NAME = 'sp-500-eps-est'
     EXT_OUTPUT_FILE_NAME = '.parquet'
 
+    SHT_RR_NAME = 'Quarterly'
     SHT_EST_NAME = "ESTIMATES&PEs"
     COLUMN_NAMES = ['date', 'price', 'op_eps', 'rep_eps',
                     'op_p/e', 'rep_p/e', '12m_op_eps', '12m_rep_eps']
@@ -27,6 +33,8 @@ class Update_param:
     # all column indexes in skip lists below are zero-based ('A' is 0)
     # all specific individual column designations are letters
     # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    
+    DATE_KEYS = ['S&P Dow Jones Indices']
 
     ACTUAL_KEYS = ['ACTUALS', 'Actuals']
     
@@ -96,9 +104,10 @@ class Update_param:
     }
 
     SHT_FRED_PARAMS = {
-        'first_row': 12,
-        'col_1': 'A',
-        'col_2': 'B',
+        'start_row': 2,
+        'stop_row': 800,
+        'first_col': 'A',
+        'last_col': 'B',
         'yr_qtr_name': YR_QTR_NAME,
         'rr_col_name': RR_COL_NAME
     }
@@ -106,15 +115,18 @@ class Update_param:
 @dataclass(frozen= True, slots= True)
 class Display_param:
     # main titles for displays
-    PAGE0_SUPTITLE = " \nPrice-Earnings Ratios for the S&P 500"
-    PROJ_EPS_SUPTITLE = " \nCalendar-Year Earnings per Share for the S&P 500"
+    PAGE0_SUPTITLE = " \nCalendar-Year Earnings per Share for the S&P 500"
+    PAGE1_SUPTITLE = " \nRatio of Price to Trailing 4-Quarter Earnings for the S&P 500"
     PAGE2_SUPTITLE = " \nEarnings Margin and Equity Premium for the S&P 500"
     PAGE3_SUPTITLE = \
         " \nS&P 500 Forward Earnings Yield, 10-Year TIPS Rate, and Equity Premium"
 
     # str: source footnotes for displays
     E_DATA_SOURCE = \
-        'https://www.spglobal.com/spdji/en/search/?query=index+earnings&activeTab=all'
+        '''
+        https://www.spglobal.com/spdji/en/search/?query=index+earnings&activeTab=all
+                                       (EPSEST)
+        '''
     RR_DATA_SOURCE = '10-year TIPS: latest rate for each quarter,' + \
         ' Board of Governors of the Federal Reserve System, ' + \
         '\nMarket Yield on U.S. Treasury Securities at 10-Year' + \

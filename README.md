@@ -143,11 +143,11 @@ sp500-earn-price-pkg v1.0.0
 ## Instructions
 0. Set ARCHIVE_DIR in src/sp500_earn_price_pkg/config/config_paths.py
 
-1. Put new .xlsx from S&P into input_dir/
+1. Put new .xlsx from S&P into input_dir/    (S&P's id: EPSEST)
     - https://www.spglobal.com/spdji/en/search/?query=index+earnings&activeTab=all
     - rename: sp-500-eps-est YYYY MM DD.xlsx
     
-2. Put new data from FRED into input_dir/
+2. Put new data from FRED into input_dir/  (FRED's id: DFII10)
     - https://fred.stlouisfed.org/series/DFII10/chart
     - In DFII10.xlsx, add real interest rates for dates that match SP's new file dates
 
