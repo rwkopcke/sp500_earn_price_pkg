@@ -47,7 +47,7 @@ from sp500_earn_price_pkg.helper_func_module \
 import sp500_earn_price_pkg.config.config_paths as config
 import sp500_earn_price_pkg.config.set_params as params
 
-import sp500_earn_price_pkg.config.set_params as params
+env = config.Fixed_locations()
 param = params.Update_param()
 
 
@@ -71,10 +71,7 @@ def update():
 ## +++++   format of std name: sp-500-eps DATE_FMT_SP_FILE    +++++++++++++
 ## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    sp_input_files_set = \
-        rd.files_valid(config.Fixed_locations().INPUT_DIR,
-                       config.Fixed_locations().INPUT_SP_FILE_GLOB_STR,
-                       config.Fixed_locations().INPUT_RR_FILE)
+    sp_input_files_set = rd.verify_valid_input_files()
     
     if not sp_input_files_set:
         hp.message([
@@ -82,10 +79,9 @@ def update():
             ])
         return
     
+    # not sorted
     sp_input_files_set = \
-        rd.ensure_consistent_names(
-            config.Fixed_locations().INPUT_DIR,
-            sp_input_files_set)
+        rd.ensure_consistent_file_names(sp_input_files_set)
     
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++              
 ## +++++  update record_dict for new files  ++++++++++++++++++++++++++++++++
@@ -121,10 +117,16 @@ def update():
 
     # fetch record_dict - if record_dist is None, create it
     record_dict = update_record.fetch()
+    
+    print(record_dict)
          
     # update record_dict for new_files_set and files_to_read_set
     [record_dict, new_files_set, files_to_read_set] = \
          update_record.update(record_dict, sp_input_files_set)
+         
+    print(record_dict)
+    print(sp_input_files_set)
+    quit()
     
     if not files_to_read_set:
         hp.message([
@@ -132,11 +134,9 @@ def update():
             'Stop Update and return to menu of actions'
         ])
         return
-    
-    quit()
 
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++              
-## +++++  fetch historical aggregate data  +++++++++++++++++++++++++++++++++
+## +++++  update historical aggregate data  +++++++++++++++++++++++++++++++++
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
     
     hp.message([
@@ -144,21 +144,43 @@ def update():
         f'in directory: \n{config.Fixed_locations().INPUT_DIR}'
     ])
     
-    ## ACTUAL DATA from existing .parquet file (not yet updated with new data)
+## EXISTING HISTORICAL DATA from .parquet file (not yet updated)
     # the rows (qtrs) to be updated are the rows that
     # contain null in the op_eps col => assumes history is not revised
-    # rows_no_update_set: yr_qtr values for rows NOT to be updated
-    if config.Fixed_locations().OUTPUT_HIST_ADDR.exists():
-        actual_df = \
-            pl.read_parquet(config.Fixed_locations().OUTPUT_HIST_ADDR)
+    # yrqtr_no_update_set: rows NOT to be updated
+    
+    actual_df = rd.read_existing_history()
+    yrqtr_not_to_update_set = \
+        rd.find_quarters_with_operating_earn(actual_df)
         
-        rows_not_to_update_set = \
-            set(pl.Series(actual_df
-                    .filter(pl.col('op_eps').is_not_null())
-                    .select(pl.col(param.Update_param().YR_QTR_NAME)))
-                  .to_list())
-    else:
-        rows_not_to_update_set = {}
+## NEW HISTORICAL DATA from latest sp file
+    # activate latest xlsx wkbk and sheet with data for sp
+    latest_file = record_dict["latest_file"]['file']
+    
+    add_df = rd.update_history(
+        latest_file,
+        yrqtr_not_to_update_set
+    )
+  
+    quit()
+
+    df = rd.sp_loader(active_sheet,
+                      rows_not_to_update_set,
+                      **param.Update_param().SHT_HIST_PARAMS) # this obtain through import
+    
+    #
+    if (any([item is None
+            for item in df['date']])):
+        hp.message([
+            f'{latest_file_addr} \nmissing date for new entries',
+            df['date']
+        ])
+        quit()
+        
+    # update add_df with new historical data
+    add_df = pl.concat([add_df, df], how= "diagonal")
+        
+
     
 ## REAL INTEREST RATES, eoq, from FRED DFII10
     active_workbook = \
@@ -169,47 +191,7 @@ def update():
     real_rt_df = rd.fred_reader(active_sheet,
                                 **param.Update_param().SHT_FRED_PARAMS)
 
-## NEW HISTORICAL DATA
-    ## WKSHT with new historical values for P and E from new excel file
-    latest_file_addr = \
-        config.Fixed_locations().INPUT_DIR / record_dict["latest_file"]['file']
-    active_workbook = load_workbook(filename= latest_file_addr,
-                                    read_only= True,
-                                    data_only= True)
-    # most recent date and prices
-    active_sheet = active_workbook[param.Update_param().SHT_EST_NAME]
 
-    # add_df, dates and latest prices, beyond existing historical data
-    date_of_sheet = \
-        rd.read_sheet_date(active_sheet, param.Update_param().DATE_KEYS,
-                           "A", 1)
-    
-    
-    add_df = \
-        rd.read_sp_date(active_sheet, 
-                        **param.Update_param().SHT_EST_DATE_PARAMS,
-                        include_prices= True)
-    
-    # load new historical data
-    # omit rows whose yr_qtr appears in the rows_no_update list
-    df = rd.sp_loader(active_sheet,
-                      rows_not_to_update_set,
-                      **param.Update_param().SHT_HIST_PARAMS)
-    
-    # if any date is None, quit
-    if (name_date is None or
-        any([item is None
-            for item in add_df['date']])):
-        
-        hp.message([
-            f'{latest_file_addr} \nmissing history date',
-            f'Name_date: {name_date}',
-            actual_df['date']
-        ])
-        quit()
-        
-    # update add_df with new historical data
-    add_df = pl.concat([add_df, df], how= "diagonal")
                
     # include rr in add_df
     add_df = add_df.join(real_rt_df, 

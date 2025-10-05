@@ -7,7 +7,7 @@ from sp500_earn_price_pkg.helper_func_module \
 import sp500_earn_price_pkg.config.config_paths as config
 import sp500_earn_price_pkg.config.set_params as param
 
-fixed_env = config.Fixed_locations()
+env = config.Fixed_locations()
 
 
 def fetch():
@@ -23,24 +23,24 @@ def fetch():
     '''
     
 # READ: record_dict
-    if fixed_env.RECORD_DICT_ADDR.exists():
-        with open(fixed_env.RECORD_DICT_ADDR,'r') as f:
+    if env.RECORD_DICT_ADDR.exists():
+        with open(env.RECORD_DICT_ADDR,'r') as f:
             record_dict = json.load(f)
             
 # WRITE: if prev record_dict exists, write backup
-        with open(fixed_env.BACKUP_RECORD_DICT_ADDR, 'w') as f:
+        with open(env.BACKUP_RECORD_DICT_ADDR, 'w') as f:
             json.dump(record_dict, f, indent= 4)
         hp.message([
-            f'Read record_dict from: \n{fixed_env.RECORD_DICT_ADDR}',
-            f'Wrote record_dict to: \n{fixed_env.BACKUP_RECORD_DICT_ADDR}'
+            f'Read record_dict from: \n{env.RECORD_DICT_ADDR}',
+            f'Wrote record_dict to: \n{env.BACKUP_RECORD_DICT_ADDR}'
         ])
         
     else:
         # create record_dict from keys and empty values
-        record_dict = fixed_env.RECORD_DICT_TEMPLATE
+        record_dict = env.RECORD_DICT_TEMPLATE
         hp.message([
             f'No record_dict.json exists at',
-            f'{fixed_env.RECORD_DICT_ADDR}',
+            f'{env.RECORD_DICT_ADDR}',
             'Created new record_dict, '
         ])
         
@@ -63,8 +63,8 @@ def update(record_dict, input_files_set):
     
 # CREATE set of new files
     prev_files_set = set(
-        fixed_env.ARCHIVE_DIR.glob(
-                  fixed_env.INPUT_SP_FILE_GLOB_STR)
+        env.ARCHIVE_DIR.glob(
+            env.INPUT_SP_FILE_GLOB_STR)
     )
     new_files_set = input_files_set - prev_files_set
     
@@ -87,8 +87,8 @@ def update(record_dict, input_files_set):
                            schema= ["file"],
                            orient= 'row')\
                 .with_columns(pl.col('file')
-                        .map_batches(hp.file_to_date,
-                                     return_dtype= pl.Date)
+                        .map_batches(hp.file_to_date_str,
+                                     return_dtype= pl.String)
                         .alias('date'))\
                 .with_columns(pl.col('date')
                         .map_batches(hp.date_to_year_qtr,
@@ -146,13 +146,13 @@ def update(record_dict, input_files_set):
         record_dict['prev_used_files'][0]
     
     record_dict['quarters_in_record'] = sorted(
-        data_df[param.Update_param().YR_QTR_NAME],
+        list(set(data_df[param.Update_param().YR_QTR_NAME])),
         reverse= True)
         
     record_dict['sources']['s&p'] = \
-        fixed_env.SP_SOURCE
+        env.SP_SOURCE
     record_dict['sources']['tips'] = \
-        fixed_env.REAL_RATE_SOURCE
+        env.REAL_RATE_SOURCE
     
     return [record_dict, new_files_set, files_to_read_set]
     

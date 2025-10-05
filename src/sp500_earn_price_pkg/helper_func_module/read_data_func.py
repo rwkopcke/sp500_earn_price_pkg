@@ -16,12 +16,14 @@ import polars.selectors as cs
 from sp500_earn_price_pkg.helper_func_module \
     import helper_func as hp
     
+import sp500_earn_price_pkg.config.config_paths as config
 import sp500_earn_price_pkg.config.set_params as params
+
+env = config.Fixed_locations()
 rd_param = params.Update_param()
     
     
-def files_valid(input_dir, sp_glob_str, 
-                rr_name):
+def verify_valid_input_files():
     '''
         Verifies that input_dir exists
         Verifies that input_dir contains
@@ -30,6 +32,10 @@ def files_valid(input_dir, sp_glob_str,
         If true, returns set of sp files 
         if false, returns empty set
     '''
+    
+    input_dir = env.INPUT_DIR
+    sp_glob_str = env.INPUT_SP_FILE_GLOB_STR
+    rr_name = env.INPUT_RR_FILE
     
     if not input_dir.exists():
         hp.message([
@@ -64,7 +70,7 @@ def files_valid(input_dir, sp_glob_str,
     return input_sp_files_set
 
 
-def ensure_consistent_names(input_dir, names_set):
+def ensure_consistent_file_names(names_set):
     '''
     Finds date in each sp input xlsx
         Amends name of input file to:
@@ -82,23 +88,24 @@ def ensure_consistent_names(input_dir, names_set):
         # https://duckduckgo.com/?q=python+string+to+datetime&t=osx&ia=web
     '''
     
+    input_dir = env.INPUT_DIR
+    
     output_sp_files_set = set()
     for file in names_set:
         path_name = input_dir / file
-        workbook = \
-            load_workbook(filename=  path_name,
-                          read_only= True, data_only= True)
-        sheet = \
-            workbook[rd_param.SHT_EST_NAME]
+        sheet = find_wk_sheet(
+            path_name,
+            rd_param.SHT_EST_NAME)
         
         row_idx = 1
         # find file's date for file's name
         while row_idx < 11:
             val = sheet.cell(row= row_idx, column= 1).value
             
-            [found_date, date_str] = hp.is_date(val)
+            # returns "" if no date as str or datetime obj
+            date_str = hp.cast_date_to_str(val)
                 
-            if found_date:
+            if date_str:
                 new_name_file = f'sp-500-eps {date_str}.xlsx'
                 # add name to return set
                 output_sp_files_set.add(new_name_file)
@@ -109,19 +116,162 @@ def ensure_consistent_names(input_dir, names_set):
                 
             row_idx += 1
             
-            if row_idx == 11:
-                hp.message([
-                    'ERROR read_data_func.std_names for files',
-                    'found no date in first 10 rows of',
-                    f'{input_dir / file}',
-                    'inspect file for date'
-                    ])
-                quit()
+        if row_idx == 11:
+            hp.message([
+                'ERROR read_data_func.std_names for files',
+                'found no date in first 10 rows of',
+                f'{input_dir / file}',
+                'inspect file for date'
+                ])
+            quit()
         
     return output_sp_files_set
+
+
+def find_wk_sheet(path_name, sheet_name):
+    '''
+        Receive 
+            path_name, address of xlsx
+            sheet_name, name of sheet in xlsx
+        Return sheet (openpyxl) for reading
+    '''
+    workbook = load_workbook(
+            filename= path_name,
+            read_only= True, 
+            data_only= True)
+    return workbook[sheet_name]
+
+
+def read_existing_history():
+    '''
+        Read saved history from parquet file, and
+        Return as pl.df 
+    '''
+    if env.OUTPUT_HIST_ADDR.exists():
+        return pl.read_parquet(env.OUTPUT_HIST_ADDR)
+    else:
+        return pl.DataFrame()
+
+    
+def update_history(file, omit_yrqtr_set):
+    '''
+        Receives an xlsx sheet
+        Reads two types of data from sheet
+            rectangular block of reported earn
+            actual qtr-end prices since last
+                qtr that contains reported earn
+        Returns a pl.dataframe
+            new historical data from the sheet
+        sheet is a list of lists,
+            a matrix extracted from the sheet
+    '''
+    sheet = find_wk_sheet(
+            env.INPUT_DIR / file,
+            rd_param.SHT_EST_NAME)
+    
+# 1st: read rectangular block of reported earn
+    # find start_row = row for key + 1
+    #      stop_row = row for key - 1
+    start_row = 1 + \
+        find_key_in_xlsx(sheet, 
+                         row_num= 1, col_ltr= 'A', 
+                         keys= rd_param.HISTORY_KEYS)
+    if omit_yrqtr_set:
+        keys= omit_yrqtr_set
+    else:
+        keys= None
+    stop_row = -1 + find_key_in_xlsx(sheet, 
+                         row_num= start_row, col_ltr= 'A',
+                         keys= keys)
+    
+    data = data_block_reader(sheet, 
+                             start_row, stop_row,
+                             ** rd_param.SHT_HIST_PARAMS)
+    
+    df = pl.DataFrame(data,
+                      schema= rd_param.COLUMN_NAMES,
+                      orientation= "row")\
+           .cast({cs.float(): pl.Float32,
+                  cs.datetime(): pl.Date})\
+           .with_columns(pl.col('date')
+                            .map_batches(hp.date_to_year_qtr)
+                            .alias(rd_param.YR_QTR_NAME))\
+           .filter(~pl.col(rd_param.YR_QTR_NAME)
+                   .is_in(omit_yrqtr_set))
     
     
-def find_key_in_xlsx(wksht, row_num, col_ltr, keys= None,
+    
+    return read_sheet_data(
+                sheet, 
+                **rd_param.SHT_HIST_PARAMS)
+    
+    
+'''
+SHT_HIST_PARAMS = {
+        'start_row_key': ACTUAL_KEYS,
+        'stop_row_key': None,
+        'first_col_key': None,
+        'last_col_key': None,
+        'start_row': None,
+        'stop_row': None,
+        'first_col': 'A',
+        'last_col': 'J',
+        'skip_cols': [4, 7]
+    }
+'''
+
+
+def read_sheet_data(wksht, 
+                    date_keys, 
+                    date_search_col, 
+                    date_start_row):
+    '''
+        fetch date from s&p's excel workbook.
+    '''
+    
+    if date_keys is None:
+        hp.message([
+            f'Date keys are {date_keys} for {wksht}',
+            'read_data_func.py: read_sheet_date'
+        ])
+        quit()
+    
+    # find date of wkbk: date cell in row below date_keys cell
+    date_row = find_key_in_xlsx(wksht, date_start_row, date_search_col, 
+                               keys= date_keys) + 1
+
+    if (date_row == 1):
+        hp.message([
+            'In read_data_funct.py read_sheet_date, date keys:',
+            f'Found no {date_keys} in {wksht}'
+        ])
+        quit()
+        
+    sheet_date = hp.dt_str_to_date(
+            wksht[f'{date_search_col}{date_row}'].value)
+    
+    if not isinstance(sheet_date, datetime.date):
+        hp.message([
+            'In read_data_funct.py read_sheet_date:',
+            f'{sheet_date} is not a datetime.date object'
+        ])
+        quit()
+    
+    return sheet_date
+
+    
+def data_block_reader_sig(wksht, 
+                      start_row, stop_row,
+                      first_col, last_col, 
+                      skip_cols= [], skip_rows= []):
+    '''
+    shows signature from below
+    '''
+    pass
+
+    
+def find_key_in_xlsx(wksht, row_num, col_ltr, 
+                     keys= None,
                      is_row_iter= True):
     '''
         for keys, which is either None or a list of strings,
@@ -184,51 +334,14 @@ def find_key_in_xlsx(wksht, row_num, col_ltr, keys= None,
         
     hp.message([
         'ERROR search found no value that matchs keys',
-        'In helper_func.py, find_key_in_xlsx(),',
+        'In read_data_func.py, find_key_in_xlsx,',
         f'keys: {keys}',
         f'is_row_iter: {is_row_iter}'
     ])
     quit()
                                                             
     return 0
-
-
-def read_sheet_date(wksht, date_keys, 
-                    date_search_col, date_start_row):
-    '''
-        fetch date from s&p's excel workbook.
-    '''
-    
-    if date_keys is None:
-        hp.message([
-            f'Date keys are {date_keys} for {wksht}',
-            'read_data_func.py: read_sheet_date'
-        ])
-        quit()
-    
-    # find date of wkbk: date cell in row below date_keys cell
-    date_row = find_key_in_xlsx(wksht, date_start_row, date_search_col, 
-                               keys= date_keys) + 1
-
-    if (date_row == 1):
-        hp.message([
-            'In read_data_funct.py read_sheet_date, date keys:',
-            f'Found no {date_keys} in {wksht}'
-        ])
-        quit()
-        
-    sheet_date = hp.dt_str_to_date(
-            wksht[f'{date_search_col}{date_row}'].value)
-    
-    if not isinstance(sheet_date, datetime.date):
-        hp.message([
-            'In read_data_funct.py read_sheet_date:',
-            f'{sheet_date} is not a datetime.date object'
-        ])
-        quit()
-    
-    return sheet_date
-    
+            
     
 '''
 SHT_EST_DATE_PARAMS = {
@@ -297,7 +410,8 @@ def read_sp_date(wksht,
     return #[name_date, df]
 
 
-def data_block_reader(wksht, start_row, stop_row,
+def data_block_reader(wksht, 
+                      start_row, stop_row,
                       first_col, last_col, 
                       skip_cols= [], skip_rows= []):
     """

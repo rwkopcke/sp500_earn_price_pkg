@@ -17,6 +17,8 @@ class Update_param:
 
     SHT_RR_NAME = 'Quarterly'
     SHT_EST_NAME = "ESTIMATES&PEs"
+    
+    # 'date' is str (DATE_FMT_SP_FILE); the rest are Float32
     COLUMN_NAMES = ['date', 'price', 'op_eps', 'rep_eps',
                     'op_p/e', 'rep_p/e', '12m_op_eps', '12m_rep_eps']
     PROJ_COLUMN_NAMES = ['date', 'op_eps', 'rep_eps',
@@ -34,27 +36,31 @@ class Update_param:
     # all specific individual column designations are letters
     # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     
-    DATE_KEYS = ['S&P Dow Jones Indices']
-
-    ACTUAL_KEYS = ['ACTUALS', 'Actuals']
+    HISTORY_P_KEYS = ['Date', 'Data as of the close of:']
+    HISTORY_KEYS = ['ACTUALS', 'Actuals']
+    ESTIMATES_KEYS = ['ESTIMATES']
+    END_KEY = ['END']
     
     SHT_EST_DATE_PARAMS = {
-        'date_keys' : ['Date', 'Data as of the close of:'],
+        'date_keys' : HISTORY_P_KEYS,
         'value_col_1' : 'D',
-        'date_key_2' : ACTUAL_KEYS,
+        'date_key_2' : HISTORY_KEYS,
         'value_col_2' : 'B',
         'column_names' : COLUMN_NAMES,
         'yr_qtr_name' : YR_QTR_NAME
     }
+    
+    SHT_P_PARAMS = {
+        'start_row': None,
+        'stop_row': None,
+        'first_col': 'D',
+        'last_col': 'D'
+    }
 
     SHT_HIST_PARAMS = {
-        'act_key' : ACTUAL_KEYS,
-        'end_key' : None,
-        'first_col' : 'A',
-        'last_col' : 'J',
-        'skip_cols' : [4, 7],
-        'column_names' : COLUMN_NAMES,
-        'yr_qtr_name' : YR_QTR_NAME
+        'first_col': 'A',
+        'last_col': 'J',
+        'skip_cols': [4, 7]
     }
 
     MARG_KEY = 'QTR'
@@ -75,7 +81,7 @@ class Update_param:
     }
 
     SHT_QTR_PARAMS = {
-        'act_key' : ['END'],
+        'act_key' : END_KEY,
         'end_key' : None,
         'first_col' : 'A',
         'last_col' : 'I',
@@ -85,7 +91,7 @@ class Update_param:
     }
 
     SHT_EST_PROJ_DATE_PARAMS = {
-        'date_keys' : ['Date', 'Data as of the close of:'],
+        'date_keys' :  HISTORY_P_KEYS,
         'value_col_1' : 'D', 
         'date_key_2' : None, 
         'value_col_2' : None,
@@ -94,8 +100,8 @@ class Update_param:
     }
 
     SHT_EST_PROJ_PARAMS = {
-        'act_key' : ['ESTIMATES'],
-        'end_key' : ACTUAL_KEYS,
+        'act_key' : ESTIMATES_KEYS,
+        'end_key' : HISTORY_KEYS,
         'first_col' : 'A',
         'last_col' : 'J',
         'skip_cols' : [1, 4, 7],

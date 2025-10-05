@@ -28,7 +28,7 @@ class Fixed_locations:
         'latest_file': {"yr_qtr": '',
                         "file": '',
                         "date": ''},       # value is str, json not accept date
-        'quarters in record': [],
+        'quarters_in_record': [],
         'prev_used_files': {"yr_qtr": '',
                             "file": '',
                             "date": ''}    # value is str, json not accept date
