@@ -30,44 +30,60 @@ def cast_date_to_str(val):
     '''
         if val is either a 
             datetime object or contains
-            a date as str, in format: rd_param.DATE_FMT_SP_ITEM
-        return date as str, in format: rd_param.DATE_FMT_SP_FILE
+            a date as str, in format: rd_param.DATE_FMT_SP_WKBK
+        return date as str, in format: rd_param.DATE_FMT
         
         Otherwise, return ""
     '''
-    if (isinstance(val, datetime)):
-        return val.strftime(rd_param.DATE_FMT_SP_FILE)
+    if isinstance(val, datetime):
+        return val.strftime(rd_param.DATE_FMT)
     
     # if val contains valid str date, convert to datetime
     if isinstance(val, str):
-        val = val[:10]         #isolates the date, if exists
-        date_ = is_str_a_date(val, rd_param.DATE_FMT_SP_ITEM)
-        if date_:
-            return date_.strftime(rd_param.DATE_FMT_SP_FILE)
-    return ""
+        #isolates the date, if exists     
+        date_ = str_is_date(val.split(" ")[0], 
+                            rd_param.DATE_FMT_SP_WKBK,
+                            rd_param.DATE_FMT)
+        return date_  # either date as str or val
+    return val
         
 
-def is_str_a_date(val, date_fmt):
+def str_is_date(val, date_fmt, proj_date_fmt):
     '''
         Receive str and date_format str
-        If val is a str that can be cast to a date
-            Return the datetime obj
+        If val is str that can be cast to a date
+            using date_fmt,
+        Return date as str
+            using rd_param.DATE_FMT
         Otherwise,
             Return empty str obj
     '''
+    date_ = is_date(val, date_fmt)
+    if date_:
+        return date_.strftime(proj_date_fmt)
+    else:
+        return val
+    
+    
+def is_date(val, date_fmt):
+    '''
+        Returns empty string if val is not
+        specified date_str
+    '''
     try:
-        return datetime.strptime(val, date_fmt)
-    except:
+        date_ = datetime.strptime(val, date_fmt)
+        return date_
+    except Exception as e:
+        # print(e)
         return ""
     
     
 def file_to_date_str(series):
     '''
-        receives pl.Series (col from df), str file names
-        extracts the date string, rd_param.DATE_FMT_SP_FILE,
-        returns: date object, as pl.Series
+        Receives pl.Series (col from df), str file names
+        Extracts the date string from rd_param.DATE_FMT,
+        Returns: date as str object, as pl.Series
     '''
-    # isolate the date str in f_name then -> date
     return pl.Series(
         [(f_name.split(' ', 1)[1]).split('.', 1)[0]
          for f_name in series])
@@ -92,19 +108,31 @@ def date_to_qtr(date):
 
 def is_quarter_4(series):
     '''
-        returns bool: T if qtr == 4; else F
+        Receives date as str pl.Series from pl.DF['date']
+        Returns bool: T if qtr == 4; else F
     '''
-    return pl.Series([yq[-1] == '4'
-                      for yq in series])
+    return pl.Series([yr_qtr[-1] == '4'
+                      for yr_qtr in series])
     
     
 def yrqtr_to_yr(series):
     '''
-        series of strings y-q in,
-        series of strings y out
+        Receives date as str pl.Series from pl.DF['date']
+        Returns year as str
     '''
-    return pl.Series([yq[:4]
-                      for yq in series])
+    return pl.Series([yr_qtr[:4]
+                      for yr_qtr in series])
+    
+
+def convert_date_str_to_wkbk_fmt(date):
+    '''
+        Receives date as a str in project format
+        Returns date as a str in wkbk formot
+    '''
+    print(date, type(date))
+    return (f'{date[8:10]}{rd_param.DATE_SP_WKBK_SEP}' +
+            f'{date[-5:-3]}{rd_param.DATE_SP_WKBK_SEP}' +
+            f'{date[0:4]}')
 
 
 def gen_sub_df(df, ind_name, suffix, col_select, years):

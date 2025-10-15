@@ -99,18 +99,18 @@ def update(record_dict, input_files_set):
     # prev_used_files contains a list of dicts, each with keys
     # 'file', 'date', param.Update_param().YR_QTR_NAME
     # one dict for each prev_used_file
-    prev_used_files_list = list(record_dict['prev_used_files']['file'])
-    if not prev_used_files_list:
-        used_df = data_df
-        prev_used_files_set = set()
-        
-    else:
+    prev_used_files_list = record_dict['prev_used_files']
+    if prev_used_files_list:
         # col names are the same as the keys 
         # contained in prev_used_files_list
-        used_df = pl.DataFrame(prev_used_files_list)\
-                    .cast({'date': pl.Date})
-        prev_used_files_set = set(
-            pl.Series(used_df['file']).to_list())
+        used_df = pl.DataFrame(prev_used_files_list,
+                               orient= 'row')
+        data_df = pl.concat(
+            [used_df, data_df.select(used_df.columns)],
+            how= 'vertical')
+        prev_used_files_set = set(used_df['file'])
+    else:
+        prev_used_files_set = set()
     
     # new files can update and replace prev files for same year_qtr
     # prev_used_files has only one file per quarter
@@ -118,36 +118,26 @@ def update(record_dict, input_files_set):
     # find the latest new file for each quarter
     #   agg(pl.all().sort_by('date').last() -- ascending sort_by()
     # in each group, using all cols, sort_by date, select the last row
-        data_df = pl.concat([used_df, 
-                            data_df.select(used_df.columns)],
-                            how= 'vertical')\
-                    .group_by(param.Update_param().YR_QTR_NAME)\
-                    .agg(pl.all().sort_by('date').last())\
-                    .sort(by= param.Update_param().YR_QTR_NAME)
+    used_files_set = set(data_df['file'])
+    data_df = data_df.group_by(param.Update_param().YR_QTR_NAME)\
+                     .agg(pl.all().sort_by('date').last())\
+                     .sort(by= param.Update_param().YR_QTR_NAME)
         
-    # and files to be used from the new input files
-    files_to_read_set = \
-        set(pl.Series(data_df['file']).to_list()) - prev_used_files_set
-
-    # update prev_used_files for the new files
-    # update_df['update_used_files']: list of dicts
-    # cast allows json to save record_dict as json
-    update_df = data_df.cast({'date': pl.String})\
-                       .select(pl.struct(pl.all())
-                            .alias('updated_used_files'))
+    # and files to be used from the filtered input files
+    files_to_read_set = set(data_df['file']) - prev_used_files_set
                        
 # UPDATE record_dict
-    record_dict['prev_used_files'] = sorted(
-        update_df['updated_used_files'],
-        reverse= True,
-        key= lambda x: x['date'])
-    
-    record_dict['latest_file'] = \
-        record_dict['prev_used_files'][0]
-    
-    record_dict['quarters_in_record'] = sorted(
-        list(set(data_df[param.Update_param().YR_QTR_NAME])),
-        reverse= True)
+    used_files_list = sorted(list(used_files_set), reverse= True)
+    record_dict['latest_file'] = used_files_list[0]
+    '''
+    used_files_dates_list = \
+        pl.Series(data_df.select(pl.col('file').map_batches(
+                                        hp.file_to_date_str, 
+                                        return_dtype= pl.String)
+                                 )
+                  ).to_list()
+    '''
+    record_dict['prev_used_files'] = used_files_list
         
     record_dict['sources']['s&p'] = \
         env.SP_SOURCE

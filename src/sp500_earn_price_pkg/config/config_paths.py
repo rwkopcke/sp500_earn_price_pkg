@@ -25,14 +25,13 @@ class Fixed_locations:
     RECORD_DICT_TEMPLATE = \
         {'sources': {'s&p': '',             
                      'tips': ''},
-        'latest_file': {"yr_qtr": '',
-                        "file": '',
-                        "date": ''},       # value is str, json not accept date
-        'quarters_in_record': [],
-        'prev_used_files': {"yr_qtr": '',
-                            "file": '',
-                            "date": ''}    # value is str, json not accept date
-        }
+        'latest_file': '',
+        'prev_used_files': []}   # [str]
+
+    # partial templates for file names
+    FILE_INPUT_WKBK_PREFIX = 'sp-'
+    INPUT_SP_FILE_GLOB_STR = f'{FILE_INPUT_WKBK_PREFIX}*.xlsx'
+    FILE_OUTPUT_WKBK_PREFIX = 'sp-eps'
     
     # root for project, top-level proj directory
     BASE_DIR = Path.cwd()
@@ -61,8 +60,6 @@ class Fixed_locations:
     RECORD_DICT_DIR = INPUT_OUTPUT_DIR
     RECORD_DICT_FILE = "record_dict.json"
     RECORD_DICT_ADDR = RECORD_DICT_DIR / RECORD_DICT_FILE
-    
-    INPUT_SP_FILE_GLOB_STR = 'sp-500*.xlsx'
     
     OUTPUT_DIR = INPUT_OUTPUT_DIR / "output_dir"
     

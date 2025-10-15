@@ -5,9 +5,14 @@ class Update_param:
     ARCHIVE_RR_FILE = False
     
     # format for dates as str in sp xlsx file names
-    DATE_FMT_SP_FILE = '%Y-%m-%d'
-    DATE_FMT_SP_ITEM = '%d/%m/%Y'
-    DATE_SP_ITEM_SEP = '/'
+    DATE_FMT = '%Y-%m-%d'
+    DATE_FMT_SP_WKBK = '%m/%d/%Y'
+    DATE_SP_WKBK_SEP = '/'
+    DATE_FMT_SEP = '-'
+    
+    WKBK_DATE_COL = 'A'
+    # max rows to read to find the date of a worksheet
+    MAX_DATE_ROWS = 5
 
     # data from "ESTIMATES&PEs" wksht
     RR_COL_NAME = 'real_int_rate'
@@ -19,8 +24,8 @@ class Update_param:
     SHT_EST_NAME = "ESTIMATES&PEs"
     
     # 'date' is str (DATE_FMT_SP_FILE); the rest are Float32
-    COLUMN_NAMES = ['date', 'price', 'op_eps', 'rep_eps',
-                    'op_p/e', 'rep_p/e', '12m_op_eps', '12m_rep_eps']
+    HIST_COLUMN_NAMES = ['date', 'price', 'op_eps', 'rep_eps',
+                'op_p/e', 'rep_p/e', '12m_op_eps', '12m_rep_eps']
     PROJ_COLUMN_NAMES = ['date', 'op_eps', 'rep_eps',
                         'op_p/e', 'rep_p/e', '12m_op_eps', '12m_rep_eps']
 
@@ -46,7 +51,7 @@ class Update_param:
         'value_col_1' : 'D',
         'date_key_2' : HISTORY_KEYS,
         'value_col_2' : 'B',
-        'column_names' : COLUMN_NAMES,
+        'column_names' : HIST_COLUMN_NAMES,
         'yr_qtr_name' : YR_QTR_NAME
     }
     
@@ -56,7 +61,7 @@ class Update_param:
         'first_col': 'D',
         'last_col': 'D'
     }
-
+    
     SHT_HIST_PARAMS = {
         'first_col': 'A',
         'last_col': 'J',

@@ -5,7 +5,8 @@
    access these values in other modules by
         import sp500_pe.read_data_func as rd
 '''
-import datetime
+from datetime import datetime
+
 
 from openpyxl import load_workbook
 import openpyxl.utils.cell as ut_cell
@@ -74,21 +75,22 @@ def ensure_consistent_file_names(names_set):
     '''
     Finds date in each sp input xlsx
         Amends name of input file to:
-            "sp-500-eps yyyy-mm-dd.xlsx"
+            'FILE_OUTPUT_WKBK_PREFIX} {DATE_FMT}.xlsx'
         where the date is taken from the
-            "Estimates" sheet, near the top of col A
+            SHT_EST_NAME sheet, near the top of WKBK_DATE_COL
         amends the names of sp files in input_dir
             to conform to the format above
-            
         quit() if cannot find a date in the file
-        
         Returns the set of std names
         
-        # https://www.programiz.com/python-programming/datetime/strftime
-        # https://duckduckgo.com/?q=python+string+to+datetime&t=osx&ia=web
+    https://www.programiz.com/python-programming/datetime/strftime
+    https://duckduckgo.com/?q=python+string+to+datetime&t=osx&ia=web
     '''
     
     input_dir = env.INPUT_DIR
+    # limit # of rows to read in WKBK_DATE_COL
+    max = rd_param.MAX_DATE_ROWS
+    date_col = rd_param.WKBK_DATE_COL
     
     output_sp_files_set = set()
     for file in names_set:
@@ -97,29 +99,35 @@ def ensure_consistent_file_names(names_set):
             path_name,
             rd_param.SHT_EST_NAME)
         
-        row_idx = 1
+        # returns a list of lists
+        first_col_list = vals_from_row_col_array_in_xl_sheet(
+            sheet, min_row= 1, max_row= max,
+            start_col_ltr= date_col, 
+            stop_col_ltr= date_col)
+        
         # find file's date for file's name
-        while row_idx < 11:
-            val = sheet.cell(row= row_idx, column= 1).value
+        for row in first_col_list:
             
-            # returns "" if no date as str or datetime obj
-            date_str = hp.cast_date_to_str(val)
-                
-            if date_str:
-                new_name_file = f'sp-500-eps {date_str}.xlsx'
+            # col_date is list of lists that contain 1-item each
+            # cast_date returns value if not a date
+            # if a date, returns date_string in DATE_FMT
+            date_str = hp.cast_date_to_str(row[0])
+            
+            if hp.is_date(date_str, rd_param.DATE_FMT):
+                datetime.strptime(date_str, rd_param.DATE_FMT)
+                new_name_file = \
+                    f'{env.FILE_OUTPUT_WKBK_PREFIX} {date_str}.xlsx'
                 # add name to return set
                 output_sp_files_set.add(new_name_file)
                 # rename file
                 path_name.rename(input_dir / new_name_file)
-                
                 break
-                
-            row_idx += 1
-            
-        if row_idx == 11:
+        
+        # full inspection of col_date_list w/o finding a date
+        if not date_str:
             hp.message([
                 'ERROR read_data_func.std_names for files',
-                'found no date in first 10 rows of',
+                'found no date in first {max} rows of',
                 f'{input_dir / file}',
                 'inspect file for date'
                 ])
@@ -142,21 +150,176 @@ def find_wk_sheet(path_name, sheet_name):
     return workbook[sheet_name]
 
 
+#def read_sheet_data(wksht,
+def vals_from_row_col_array_in_xl_sheet(
+        wksht, min_row= 1, max_row= 2,
+        start_col_ltr= 'A', stop_col_ltr= 'B'):
+    '''
+        fetch data from an xls worsheet
+        start_col and stop_col are letters
+        return array of values as a pl.DataFrame
+    '''
+
+    return [[cell.value for cell in row]
+             for row in wksht.iter_rows(
+                min_row= min_row, 
+                max_row= max_row,
+                min_col= ut_cell\
+                    .column_index_from_string(start_col_ltr), 
+                max_col= ut_cell\
+                    .column_index_from_string(stop_col_ltr))
+            ]
+
+def find_keys_in_xlsx(wksht,
+                      row_num= 1, 
+                      col_ltr= 'A', 
+                      start_keys= None,
+                      stop_keys= None,
+                      is_row_iter= True):
+    '''
+        this function scans a row or a col of wksht to
+            find the cell that displays an eligible key
+        keys: either None or a list of strings,
+        
+        start at cell specified by col_ltr, row_num.
+        if is_row_iter= True, iter "down" rows
+        if False, iter across cols
+        
+        when a match occurs, return row_num or col_ltr
+        when no match occurs, quit with message
+    '''
+    def validate_keys(keys):
+        if (keys is not None):
+            # ensure keys is a list of str
+            if ((type(keys) is not list)
+                or
+                (not all([type(item) is str 
+                          for item in keys]))
+                or
+                (not keys)):
+                    hp.message([
+                        'ERROR keys is not a list of str',
+                        'In helper_func.py, find_key_in_xlsx(),',
+                        f'keys: {keys}'])
+                    quit()
+            return keys
+        
+    # input array, convert dates to DATE_FMT atr
+                 
+    start_keys = validate_keys(start_keys)
+    stop_keys = validate_keys(stop_keys)
+    
+    # initial values for iter loop
+    _, col_num = coordinate_to_tuple(f'{col_ltr}{row_num}')
+    
+    if is_row_iter:
+        max_row = wksht.max_row
+        max_col = col_num
+        max_to_read = max_row
+    else:
+        max_col = wksht.max_column
+        max_row = row_num
+        max_to_read = max_col
+
+    max_to_read += 1
+    
+    # list of lists that each have 1 element
+    cell_list = \
+        vals_from_row_col_array_in_xl_sheet(
+            wksht, 
+            min_row= row_num, max_row= max_row,
+            start_col_ltr= col_ltr, 
+            stop_col_ltr= ut_cell.get_column_letter(max_col))
+    
+    # if searching first col, cast dates to DATE_FMT
+    if max_col == 1:
+        # col_date is list of lists that contain 1-item each
+        # does not cast if not a date
+        cell_list = [hp.cast_date_to_str(row[0])
+                     for row in cell_list]
+    
+    start = 0
+    stop = 0
+    
+    for idx, val in enumerate(cell_list):
+        if start == 0:
+            if start_keys is None:
+                if val is None:
+                    start = idx
+                    continue
+            else:
+                if val in start_keys:
+                    start = idx
+                    continue
+        if ((stop == 0) and (start >0)) or (stop < start):
+            if stop_keys is None:
+                if val is None:
+                    stop = idx
+                    break
+            else:
+                if val in stop_keys:
+                    stop = idx
+                    break
+                
+    if not start * stop:
+        hp.message([
+            f'In find_keys_in_xlsx',
+            f'worksheet: {wksht}',
+            f'start: {start} and stop: {stop}',
+            f'start_keys: {start_keys}',
+            f'stop_keys: {stop_keys}',
+            f'list of values: {[cell for cell in cell_list]}',
+            f'halting operation'
+        ])
+    
+    if is_row_iter:
+        return [start, stop]
+    else:
+        return [
+            ut_cell.get_column_letter(start),
+            ut_cell.get_column_letter(stop)
+        ]
+
+
 def read_existing_history():
     '''
         Read saved history from parquet file, and
-        Return as pl.df 
+        Return as pl.df or empty pl.df
+        
+        Ensures 'date' col is pl.String in DATE_FMT
     '''
     if env.OUTPUT_HIST_ADDR.exists():
-        return pl.read_parquet(env.OUTPUT_HIST_ADDR)
+        return pl.read_parquet(env.OUTPUT_HIST_ADDR)\
+                 .cast({'date': pl.String})
     else:
         return pl.DataFrame()
+    
+
+def find_qtrs_without_op_earn(df):
+    '''
+        Receives pl.df
+        Return the set of rows to update
+        If df is not empty
+            return from col df[yr_qtrs]
+            the set of yr_qtrs
+            for which operating eps is null
+        otherwise, return empty set
+    '''
+    
+    if not df.is_empty():
+        return set(
+            pl.Series(df.filter(pl.col('op_eps').is_null())
+                        .select(pl.col('date')))
+                        .to_list())
+    else:
+        return set()
 
     
-def update_history(file, omit_yrqtr_set):
+def update_history(file, dates_set):
     '''
-        Receives an xlsx sheet
-        Reads two types of data from sheet
+        Receives an xlsx sheet and dates
+            to read from actual data
+        Reads two types of data from sheet:
             rectangular block of reported earn
             actual qtr-end prices since last
                 qtr that contains reported earn
@@ -169,191 +332,117 @@ def update_history(file, omit_yrqtr_set):
             env.INPUT_DIR / file,
             rd_param.SHT_EST_NAME)
     
-# 1st: read rectangular block of reported earn
-    # find start_row = row for key + 1
-    #      stop_row = row for key - 1
-    start_row = 1 + \
-        find_key_in_xlsx(sheet, 
-                         row_num= 1, col_ltr= 'A', 
-                         keys= rd_param.HISTORY_KEYS)
-    if omit_yrqtr_set:
-        keys= omit_yrqtr_set
+    if dates_set:
+        stop_keys = [min(dates_set)]
     else:
-        keys= None
-    stop_row = -1 + find_key_in_xlsx(sheet, 
-                         row_num= start_row, col_ltr= 'A',
-                         keys= keys)
-    
-    data = data_block_reader(sheet, 
-                             start_row, stop_row,
-                             ** rd_param.SHT_HIST_PARAMS)
-    
-    df = pl.DataFrame(data,
-                      schema= rd_param.COLUMN_NAMES,
-                      orientation= "row")\
-           .cast({cs.float(): pl.Float32,
-                  cs.datetime(): pl.Date})\
-           .with_columns(pl.col('date')
-                            .map_batches(hp.date_to_year_qtr)
-                            .alias(rd_param.YR_QTR_NAME))\
-           .filter(~pl.col(rd_param.YR_QTR_NAME)
-                   .is_in(omit_yrqtr_set))
-    
-    
-    
-    return read_sheet_data(
-                sheet, 
-                **rd_param.SHT_HIST_PARAMS)
-    
-    
-'''
-SHT_HIST_PARAMS = {
-        'start_row_key': ACTUAL_KEYS,
-        'stop_row_key': None,
-        'first_col_key': None,
-        'last_col_key': None,
-        'start_row': None,
-        'stop_row': None,
-        'first_col': 'A',
-        'last_col': 'J',
-        'skip_cols': [4, 7]
-    }
-'''
+        stop_keys = None
 
-
-def read_sheet_data(wksht, 
-                    date_keys, 
-                    date_search_col, 
-                    date_start_row):
-    '''
-        fetch date from s&p's excel workbook.
-    '''
+    [min_row, max_row] = find_keys_in_xlsx(
+        sheet,
+        col_ltr= rd_param.WKBK_DATE_COL,
+        start_keys= rd_param.HISTORY_KEYS,
+        stop_keys= stop_keys)
     
-    if date_keys is None:
-        hp.message([
-            f'Date keys are {date_keys} for {wksht}',
-            'read_data_func.py: read_sheet_date'
-        ])
-        quit()
+    df = pl.DataFrame(
+                vals_from_row_col_array_in_xl_sheet(
+                            sheet, 
+                            min_row= min_row + 2, 
+                            max_row= max_row + 1,
+                            start_col_ltr= 'A', 
+                            stop_col_ltr= 'J'),
+                orient= 'row')\
+              .select(cs.by_dtype(pl.String, 
+                                  pl.Float64))\
+              .cast({cs.float(): pl.Float32})
+    df.columns = rd_param.HIST_COLUMN_NAMES
+    return df.with_columns(
+                pl.col('date').map_elements(
+                    hp.cast_date_to_str,
+                    return_dtype= pl.String)
+                )
     
-    # find date of wkbk: date cell in row below date_keys cell
-    date_row = find_key_in_xlsx(wksht, date_start_row, date_search_col, 
-                               keys= date_keys) + 1
-
-    if (date_row == 1):
-        hp.message([
-            'In read_data_funct.py read_sheet_date, date keys:',
-            f'Found no {date_keys} in {wksht}'
-        ])
+    
+    
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+    
+    
+    '''  
+        data = data_block_reader(sheet, 
+                                start_row, stop_row,
+                                ** rd_param.SHT_HIST_PARAMS)
+        print(data[0])
+        print(data[1])
         quit()
         
-    sheet_date = hp.dt_str_to_date(
-            wksht[f'{date_search_col}{date_row}'].value)
-    
-    if not isinstance(sheet_date, datetime.date):
-        hp.message([
-            'In read_data_funct.py read_sheet_date:',
-            f'{sheet_date} is not a datetime.date object'
-        ])
-        quit()
-    
-    return sheet_date
-
-    
-def data_block_reader_sig(wksht, 
-                      start_row, stop_row,
-                      first_col, last_col, 
-                      skip_cols= [], skip_rows= []):
-    '''
-    shows signature from below
-    '''
-    pass
-
-    
-def find_key_in_xlsx(wksht, row_num, col_ltr, 
-                     keys= None,
-                     is_row_iter= True):
-    '''
-        for keys, which is either None or a list of strings,
-        find the cell whose value is in keys.
-        start at cell specified by col_ltr, row_num.
-        if is_row_iter= True, iter "down" rows
-        if False, iter across cols
+        df = pl.DataFrame(data,
+                        schema= rd_param.COLUMN_NAMES,
+                        orientation= "row")\
+            .cast({cs.float(): pl.Float32,
+                    cs.datetime(): pl.Date})\
+            .with_columns(pl.col('date')
+                                .map_batches(hp.date_to_year_qtr)
+                                .alias(rd_param.YR_QTR_NAME))\
+            .filter(pl.col(rd_param.YR_QTR_NAME)
+                    .is_in(yrqtr_set))
         
-        when a match occurs, return row_num, col_num, col_ltr
-        when no match occurs, return msg
+        
+        
+        return read_sheet_data(
+                    sheet, 
+                    **rd_param.SHT_HIST_PARAMS)
+        
     '''
     
-    if (keys is not None):
-        # ensure keys is a list
-        if (type(keys) is not list):
-            keys = list(keys)
-        
-        # keys must be a (nonempty) list of str
-        if ((not all([type(item) is str 
-                      for item in keys])) 
-            or
-            (not keys)):
+    
+    '''
+    SHT_HIST_PARAMS = {
+            'start_row_key': ACTUAL_KEYS,
+            'stop_row_key': None,
+            'first_col_key': None,
+            'last_col_key': None,
+            'start_row': None,
+            'stop_row': None,
+            'first_col': 'A',
+            'last_col': 'J',
+            'skip_cols': [4, 7]
+        }
+    '''
+
+            
+    '''
+        if date_keys is None:
             hp.message([
-                'ERROR keys is not a list of str',
-                'In helper_func.py, find_key_in_xlsx(),',
-                f'keys: {keys}',
-                f'is_row_iter: {is_row_iter}',
-                f'row_start: {row_num}; col_start: {col_ltr}'
+                f'Date keys are {date_keys} for {wksht}',
+                'read_data_func.py: read_sheet_date'
             ])
             quit()
-    
-    # initial values for iter loop
-    _, col_num = coordinate_to_tuple(f'{col_ltr}{row_num}')
-    if is_row_iter:
-        max_to_read = wksht.max_row
-        iter_idx = row_num
-    else:
-        max_to_read = wksht.max_column
-        iter_idx = col_num
-    max_to_read += 1
-    
-    # iter loop
-    while iter_idx < max_to_read:
-        val = wksht.cell(row= row_num, column= col_num).value
-                
-        if (keys is not None):
-            if (val in keys):
-                return [row_num, col_num, \
-                    ut_cell.get_column_letter(col_num)]
-        else:
-            if (val is None):
-                return row_num, col_num, \
-                    ut_cell.get_column_letter(col_num)
         
-        if is_row_iter:
-            row_num += 1
-        else:
-            col_num += 1
-        iter_idx += 1
+        # find date of wkbk: date cell in row below date_keys cell
+        date_row = find_key_in_xlsx(wksht, date_start_row, date_search_col, 
+                                keys= date_keys) + 1
+
+        if (date_row == 1):
+            hp.message([
+                'In read_data_funct.py read_sheet_date, date keys:',
+                f'Found no {date_keys} in {wksht}'
+            ])
+            quit()
+            
+        sheet_date = hp.dt_str_to_date(
+                wksht[f'{date_search_col}{date_row}'].value)
         
-    hp.message([
-        'ERROR search found no value that matchs keys',
-        'In read_data_func.py, find_key_in_xlsx,',
-        f'keys: {keys}',
-        f'is_row_iter: {is_row_iter}'
-    ])
-    quit()
-                                                            
-    return 0
+        if not isinstance(sheet_date, datetime.date):
+            hp.message([
+                'In read_data_funct.py read_sheet_date:',
+                f'{sheet_date} is not a datetime.date object'
+            ])
+            quit()
+        
+        return sheet_date
+    '''
             
     
-'''
-SHT_EST_DATE_PARAMS = {
-        'date_keys' : ['Date', 'Data as of the close of:'],
-        'date_search_col': 'A',
-        'date_start_row': 1,
-        'value_col_1' : 'D',
-        'date_key_2' : ACTUAL_KEYS,
-        'value_col_2' : 'B',
-        'column_names' : COLUMN_NAMES,
-        'yr_qtr_name' : YR_QTR_NAME
-'''
+    
 def read_sp_date(wksht,
                  date_keys, date_search_col,
                  date_start_row,
@@ -384,7 +473,7 @@ def read_sp_date(wksht,
     price_lst.append(wksht[f'{value_col_1}{key_row + 1}'].value)
     
     # fetch next date and price
-    key_row = find_key_in_xlsx(wksht, key_row, 'A', 
+    key_row = find_keys_in_xlsx(wksht, key_row, 'A', 
                                key_values= date_key_2)
     
     if (key_row == 0):

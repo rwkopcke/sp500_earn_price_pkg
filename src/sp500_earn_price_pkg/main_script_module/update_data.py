@@ -82,7 +82,7 @@ def update():
     # not sorted
     sp_input_files_set = \
         rd.ensure_consistent_file_names(sp_input_files_set)
-    
+        
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++              
 ## +++++  update record_dict for new files  ++++++++++++++++++++++++++++++++
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -117,16 +117,10 @@ def update():
 
     # fetch record_dict - if record_dist is None, create it
     record_dict = update_record.fetch()
-    
-    print(record_dict)
          
     # update record_dict for new_files_set and files_to_read_set
     [record_dict, new_files_set, files_to_read_set] = \
          update_record.update(record_dict, sp_input_files_set)
-         
-    print(record_dict)
-    print(sp_input_files_set)
-    quit()
     
     if not files_to_read_set:
         hp.message([
@@ -138,9 +132,10 @@ def update():
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++              
 ## +++++  update historical aggregate data  +++++++++++++++++++++++++++++++++
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-    
+
+    latest_file = record_dict["latest_file"]
     hp.message([
-        f'Update historical data from: {record_dict['latest_file']['file']}',
+        f'Update historical data from: {latest_file}',
         f'in directory: \n{config.Fixed_locations().INPUT_DIR}'
     ])
     
@@ -150,32 +145,29 @@ def update():
     # yrqtr_no_update_set: rows NOT to be updated
     
     actual_df = rd.read_existing_history()
-    yrqtr_not_to_update_set = \
-        rd.find_quarters_with_operating_earn(actual_df)
+    if not actual_df.is_empty():
+        dates_to_update_set = \
+            rd.find_qtrs_without_op_earn(actual_df)
+    else:
+        dates_to_update_set = None
         
 ## NEW HISTORICAL DATA from latest sp file
     # activate latest xlsx wkbk and sheet with data for sp
-    latest_file = record_dict["latest_file"]['file']
-    
     add_df = rd.update_history(
         latest_file,
-        yrqtr_not_to_update_set
-    )
-  
-    quit()
-
-    df = rd.sp_loader(active_sheet,
-                      rows_not_to_update_set,
-                      **param.Update_param().SHT_HIST_PARAMS) # this obtain through import
+        dates_to_update_set)
     
-    #
+    hp.my_df_print(actual_df)
+    hp.my_df_print(add_df)
+    
+    quit()
+    
     if (any([item is None
             for item in df['date']])):
         hp.message([
-            f'{latest_file_addr} \nmissing date for new entries',
+            f'{latest_file} \nmissing date for new entries',
             df['date']
         ])
-        quit()
         
     # update add_df with new historical data
     add_df = pl.concat([add_df, df], how= "diagonal")

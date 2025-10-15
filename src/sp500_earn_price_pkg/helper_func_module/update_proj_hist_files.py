@@ -1,29 +1,14 @@
 import polars as pl
+import polars.selectors as cs
+
+from sp500_earn_price_pkg.helper_func_module \
+    import helper_func as hp
 
 import sp500_earn_price_pkg.config.config_paths as config
 import sp500_earn_price_pkg.config.set_params as params
 
 env = config.Fixed_locations()
 rd_param = params.Update_param()
-
-
-def find_quarters_with_operating_earn(df):
-    '''
-        Receives pl.df
-        Return the set of rows not to update
-        If df is not empty
-            return from col df[yr_qtrs]
-            the set of yr_qtrs
-            for which operating eps is not null
-        otherwise, return empty set
-    '''
-    if not df.is_empty:
-        return set(pl.Series(df
-                .filter(pl.col('op_eps').is_not_null())
-                .select(pl.col(rd_param.YR_QTR_NAME)))
-                .to_list())
-    else:
-        return {}
 
 
 def update():
