@@ -41,31 +41,18 @@ class Update_param:
     # all specific individual column designations are letters
     # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     
-    HISTORY_P_KEYS = ['Date', 'Data as of the close of:']
     HISTORY_KEYS = ['ACTUALS', 'Actuals']
+    PRICE_KEYS = ['Date', 'Data as of the close of:']
     ESTIMATES_KEYS = ['ESTIMATES']
     END_KEY = ['END']
     
     SHT_EST_DATE_PARAMS = {
-        'date_keys' : HISTORY_P_KEYS,
+        'date_keys' : PRICE_KEYS,
         'value_col_1' : 'D',
         'date_key_2' : HISTORY_KEYS,
         'value_col_2' : 'B',
         'column_names' : HIST_COLUMN_NAMES,
         'yr_qtr_name' : YR_QTR_NAME
-    }
-    
-    SHT_P_PARAMS = {
-        'start_row': None,
-        'stop_row': None,
-        'first_col': 'D',
-        'last_col': 'D'
-    }
-    
-    SHT_HIST_PARAMS = {
-        'first_col': 'A',
-        'last_col': 'J',
-        'skip_cols': [4, 7]
     }
 
     MARG_KEY = 'QTR'
@@ -96,7 +83,7 @@ class Update_param:
     }
 
     SHT_EST_PROJ_DATE_PARAMS = {
-        'date_keys' :  HISTORY_P_KEYS,
+        'date_keys' :  PRICE_KEYS,
         'value_col_1' : 'D', 
         'date_key_2' : None, 
         'value_col_2' : None,

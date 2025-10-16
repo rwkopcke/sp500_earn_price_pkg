@@ -88,6 +88,10 @@ def file_to_date_str(series):
         [(f_name.split(' ', 1)[1]).split('.', 1)[0]
          for f_name in series])
     
+
+# def item_to_date_str(series):
+    
+    
     
 def date_to_year_qtr(series):
     '''
@@ -103,7 +107,7 @@ def date_to_qtr(date):
         Extracts month from date_str
         Returns qtr number as string
     '''
-    return f"{((int(date[6:7])) - 1) // 3 + 1 }"
+    return f"{((int(date[5:7])) - 1) // 3 + 1 }"
 
 
 def is_quarter_4(series):

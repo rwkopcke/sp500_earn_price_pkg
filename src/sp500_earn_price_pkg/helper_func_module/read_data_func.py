@@ -237,7 +237,12 @@ def find_keys_in_xlsx(wksht,
         # does not cast if not a date
         cell_list = [hp.cast_date_to_str(row[0])
                      for row in cell_list]
-    
+        
+    [start, stop] = inspect_cell_list(cell_list,
+                                      start_keys= start_keys,
+                                      stop_keys= stop_keys,
+                                      start= 0, stop= 0)
+    '''
     start = 0
     stop = 0
     
@@ -260,6 +265,7 @@ def find_keys_in_xlsx(wksht,
                 if val in stop_keys:
                     stop = idx
                     break
+    '''
                 
     if not start * stop:
         hp.message([
@@ -273,12 +279,47 @@ def find_keys_in_xlsx(wksht,
         ])
     
     if is_row_iter:
-        return [start, stop]
+        return [start, stop, cell_list]
     else:
         return [
             ut_cell.get_column_letter(start),
-            ut_cell.get_column_letter(stop)
-        ]
+            ut_cell.get_column_letter(stop),
+            cell_list]
+        
+        
+def inspect_cell_list(cell_list,
+                      start_keys= None,
+                      stop_keys= None,
+                      start= 0, stop= 9999):
+    '''
+        stop= 999 (the default) returns 
+            only a valid start value
+            the stop value remains 9999
+    '''
+    
+    for idx, val in enumerate(cell_list):
+        if start == 0:
+            if start_keys is None:
+                if val is None:
+                    start = idx
+                    continue
+            else:
+                if val in start_keys:
+                    start = idx
+                    continue
+        if not (stop == 9999):
+            if (((stop == 0) and (start >0)) or 
+                (stop < start)):
+                if stop_keys is None:
+                    if val is None:
+                        stop = idx
+                        break
+                else:
+                    if val in stop_keys:
+                        stop = idx
+                        break
+                
+    return [start, stop]
 
 
 def read_existing_history():
@@ -318,7 +359,7 @@ def find_qtrs_without_op_earn(df):
 def update_history(file, dates_set):
     '''
         Receives an xlsx sheet and dates
-            to read from actual data
+            to read from history on the sheet
         Reads two types of data from sheet:
             rectangular block of reported earn
             actual qtr-end prices since last
@@ -337,167 +378,92 @@ def update_history(file, dates_set):
     else:
         stop_keys = None
 
-    [min_row, max_row] = find_keys_in_xlsx(
-        sheet,
-        col_ltr= rd_param.WKBK_DATE_COL,
-        start_keys= rd_param.HISTORY_KEYS,
-        stop_keys= stop_keys)
+    [min_row, max_row, cell_list] = \
+        find_keys_in_xlsx(
+            sheet,
+            col_ltr= rd_param.WKBK_DATE_COL,
+            start_keys= rd_param.HISTORY_KEYS,
+            stop_keys= stop_keys)
+    
+    print(min_row, max_row)
     
     df = pl.DataFrame(
-                vals_from_row_col_array_in_xl_sheet(
-                            sheet, 
-                            min_row= min_row + 2, 
-                            max_row= max_row + 1,
-                            start_col_ltr= 'A', 
-                            stop_col_ltr= 'J'),
-                orient= 'row')\
-              .select(cs.by_dtype(pl.String, 
-                                  pl.Float64))\
-              .cast({cs.float(): pl.Float32})
+            vals_from_row_col_array_in_xl_sheet(
+                        sheet, 
+                        min_row= min_row + 2, 
+                        max_row= max_row + 1,
+                        start_col_ltr= 'A', 
+                        stop_col_ltr= 'J'),
+            orient= 'row')\
+        .select(cs.by_dtype(pl.String, 
+                            pl.Float64))\
+        .cast({cs.float(): pl.Float32})
     df.columns = rd_param.HIST_COLUMN_NAMES
-    return df.with_columns(
+    df = df.with_columns(
                 pl.col('date').map_elements(
                     hp.cast_date_to_str,
-                    return_dtype= pl.String)
-                )
+                    return_dtype= pl.String))
     
+    recent_prices_df = pl.DataFrame(
+            vals_from_row_col_array_in_xl_sheet(
+                            sheet, 
+                            min_row= min_row - 4, 
+                            max_row= min_row - 1,
+                            start_col_ltr= 'A', 
+                            stop_col_ltr= 'B'),
+            schema = ['date', 'price'],
+            orient= 'row')\
+        .filter(~pl.col('price').is_null())\
+        .with_columns(
+            pl.col('date').map_elements(
+                hp.cast_date_to_str,
+                return_dtype= pl.String))\
+        .cast( {'price': pl.Float32})
+        
+    [start, _] = \
+        inspect_cell_list(cell_list,
+                          start_keys= rd_param.PRICE_KEYS,
+                          start= 0)
     
+    [date_, price_] = vals_from_row_col_array_in_xl_sheet(
+                            sheet, 
+                            min_row= start + 1, 
+                            max_row= start + 2,
+                            start_col_ltr= 'D', 
+                            stop_col_ltr= 'D')
+    current_price_df = \
+        pl.DataFrame({'date': date_,
+                      'price': price_},
+                     orient= 'row')\
+          .with_columns(
+              pl.col('date').map_elements(
+                  hp.cast_date_to_str,
+                  return_dtype= pl.String))\
+          .cast({'price': pl.Float32})
+    hp.my_df_print(current_price_df)
+    
+    recent_prices_df = pl.concat(
+        [recent_prices_df, current_price_df],
+        how= 'vertical')
+        
+    df = recent_prices_df.join(df, 
+                               on= ['price'],
+                               how= 'full',
+                               coalesce=True,)\
+            .with_columns(
+                pl.when(pl.col.date.is_null())
+                       .then(pl.col.date_right)
+                       .otherwise(pl.col.date)
+                  .alias('date'))\
+            .drop(pl.col.date_right)\
+            .sort(by= 'date')\
+            .with_columns(pl.col.date.map_batches(
+                hp.date_to_year_qtr, 
+                return_dtype= pl.String)
+            .alias(rd_param.YR_QTR_NAME))
+    return df
     
 #$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-    
-    
-    '''  
-        data = data_block_reader(sheet, 
-                                start_row, stop_row,
-                                ** rd_param.SHT_HIST_PARAMS)
-        print(data[0])
-        print(data[1])
-        quit()
-        
-        df = pl.DataFrame(data,
-                        schema= rd_param.COLUMN_NAMES,
-                        orientation= "row")\
-            .cast({cs.float(): pl.Float32,
-                    cs.datetime(): pl.Date})\
-            .with_columns(pl.col('date')
-                                .map_batches(hp.date_to_year_qtr)
-                                .alias(rd_param.YR_QTR_NAME))\
-            .filter(pl.col(rd_param.YR_QTR_NAME)
-                    .is_in(yrqtr_set))
-        
-        
-        
-        return read_sheet_data(
-                    sheet, 
-                    **rd_param.SHT_HIST_PARAMS)
-        
-    '''
-    
-    
-    '''
-    SHT_HIST_PARAMS = {
-            'start_row_key': ACTUAL_KEYS,
-            'stop_row_key': None,
-            'first_col_key': None,
-            'last_col_key': None,
-            'start_row': None,
-            'stop_row': None,
-            'first_col': 'A',
-            'last_col': 'J',
-            'skip_cols': [4, 7]
-        }
-    '''
-
-            
-    '''
-        if date_keys is None:
-            hp.message([
-                f'Date keys are {date_keys} for {wksht}',
-                'read_data_func.py: read_sheet_date'
-            ])
-            quit()
-        
-        # find date of wkbk: date cell in row below date_keys cell
-        date_row = find_key_in_xlsx(wksht, date_start_row, date_search_col, 
-                                keys= date_keys) + 1
-
-        if (date_row == 1):
-            hp.message([
-                'In read_data_funct.py read_sheet_date, date keys:',
-                f'Found no {date_keys} in {wksht}'
-            ])
-            quit()
-            
-        sheet_date = hp.dt_str_to_date(
-                wksht[f'{date_search_col}{date_row}'].value)
-        
-        if not isinstance(sheet_date, datetime.date):
-            hp.message([
-                'In read_data_funct.py read_sheet_date:',
-                f'{sheet_date} is not a datetime.date object'
-            ])
-            quit()
-        
-        return sheet_date
-    '''
-            
-    
-    
-def read_sp_date(wksht,
-                 date_keys, date_search_col,
-                 date_start_row,
-                 value_col_1, 
-                 date_key_2, value_col_2,
-                 column_names, yr_qtr_name,
-                 include_prices= False):
-    '''
-        fetch date from s&p's excel workbook.
-        fetch recent s&p prices, which occur after
-            the last reported set of earnings if
-            include_prices= True.
-        the historical record of prices is current
-        the record for earnings appears with a lag
-            prices are quarter-end
-            earnings are reported quarterly
-            
-        return the workbook's date in name_date,
-            type datetime.date
-        if include_prices= True,
-            also return df with recent prices
-            and their dates, type datetime.date
-    '''
-    date_lst = []
-    price_lst = []
-    
-    #date_lst.append(name_date)
-    price_lst.append(wksht[f'{value_col_1}{key_row + 1}'].value)
-    
-    # fetch next date and price
-    key_row = find_keys_in_xlsx(wksht, key_row, 'A', 
-                               key_values= date_key_2)
-    
-    if (key_row == 0):
-        hp.message([
-            'In read_data_func.py read_sp_date, for date_key_2:',
-            f'Found no {date_key_2} in {wksht}'
-        ])
-        quit()
-    
-    date_lst.append(hp.dt_str_to_date(
-        wksht[f'A{key_row - 2}'].value))
-    price_lst.append(wksht[f'{value_col_2}{key_row -2}'].value)
-    
-    df = pl.DataFrame({
-                column_names[0]: date_lst,
-                column_names[1]: price_lst},
-                schema= {column_names[0]: pl.Date, 
-                            column_names[1]: pl.Float32})\
-           .with_columns(pl.col('date')
-                            .map_batches(hp.date_to_year_qtr)
-                            .alias(yr_qtr_name))
-    
-    return #[name_date, df]
-
 
 def data_block_reader(wksht, 
                       start_row, stop_row,
@@ -514,11 +480,6 @@ def data_block_reader(wksht,
     
     rng = wksht[f'{first_col}{start_row}:{last_col}{stop_row}']
     
-    print(rng)
-    print(rng[0])
-    print(rng[0][0])
-    quit()
-    
     data = [[cell_.value
              for c_idx, cell_ in enumerate(row)
                  if c_idx not in skip_cols]  
@@ -526,68 +487,6 @@ def data_block_reader(wksht,
                  if r_idx not in skip_rows]
     
     return data
-    
-
-def sp_loader(wksht, rows_no_update,
-                act_key, end_key, first_col, last_col,
-                skip_cols= [], column_names= [],
-                yr_qtr_name= ''):
-    '''
-        read data from s&p excel workbook sheet
-        that contains history for prices and earnings
-        and that contains projections of future earnings
-        return df
-    '''
-    
-    # fetch data from wksht
-    # fix the block of rows and cols that contain the data
-    key_row = hp.find_key_row(wksht, 'A', 1, 
-                              key_values= act_key)
-    
-    # first data row to read
-    start_row = 1 + key_row
-    
-    # find the row with terminal key values, the extent of the data
-    # move up from this row by amount = # row_no_update (hist data)
-    # or 1 (proj data)
-    # collect only the rows with new data
-    stop_row = hp.find_key_row(wksht, 'A', start_row,
-                               key_values= end_key,
-                               is_stop_row= True)
-    len_ = len(rows_no_update)
-    bool_v = len_ > 0
-    # adjust stop row for # rows not to update
-    # if len_ > 0: subtract len_ from stop_row #
-    # if len == 0: subtract 1 from stop_row #
-    stop_row -= len_ * bool_v + 1 * (1 - bool_v)  
-
-    if (stop_row < start_row):
-        hp.message([
-            'In sp_loader:',
-            'the saved history has more quarters than the',
-            'the history in the new file'
-        ])
-        quit()
-    
-    # fetch the data from the block
-    # always reads at least one row
-    data = data_block_reader(wksht, start_row, stop_row,
-                             first_col, last_col, skip_cols)
-    
-    # row[0]: datetime or str, '%m/%d/%Y' is first 'word' in str
-    # iterate over rows to convert all dates to datetime
-    # this series is called 'date' in the pl.DF (must be one dtype)
-    for row in data:
-        row[0] = hp.dt_str_to_date(row[0])
-        
-    df = pl.DataFrame(data, schema=column_names, orient="row")\
-                .cast({cs.float(): pl.Float32,
-                       cs.datetime(): pl.Date})\
-                .with_columns(pl.col('date')
-                            .map_batches(hp.date_to_year_qtr)
-                            .alias(yr_qtr_name))
-                            
-    return df
 
 
 def margin_loader(wksht, dates_no_update,
