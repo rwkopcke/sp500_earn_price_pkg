@@ -33,7 +33,7 @@ def cast_date_to_str(val):
             a date as str, in format: rd_param.DATE_FMT_SP_WKBK
         return date as str, in format: rd_param.DATE_FMT
         
-        Otherwise, return ""
+        Otherwise, return val
     '''
     if isinstance(val, datetime):
         return val.strftime(rd_param.DATE_FMT)

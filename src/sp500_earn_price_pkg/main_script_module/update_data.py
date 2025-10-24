@@ -31,12 +31,13 @@ import polars as pl
 import polars.selectors as cs
 from openpyxl import load_workbook
 
-from sp500_earn_price_pkg.helper_func_module import (
-    update_record,
-    update_write_history_and_industry_files,
-    update_proj_hist_files,
-    update_write_proj_files,
-    update_write_record,
+from sp500_earn_price_pkg.main_script_module.update_data_seqments \
+    import (
+        update_record,
+        update_write_history_and_industry_files,
+        update_proj_hist_files,
+        update_write_proj_files,
+        update_write_record,
 )
 
 from sp500_earn_price_pkg.helper_func_module \
@@ -150,63 +151,31 @@ def update():
             rd.find_qtrs_without_op_earn(actual_df)
     else:
         dates_to_update_set = None
-        
+    
 ## NEW HISTORICAL DATA from latest sp file
     # activate latest xlsx wkbk and sheet with data for sp
     add_df = rd.update_history(
         latest_file,
         dates_to_update_set)
     
-    hp.my_df_print(actual_df)
-    hp.my_df_print(add_df)
-    
-    quit()
-    
-    if (any([item is None
-            for item in df['date']])):
-        hp.message([
-            f'{latest_file} \nmissing date for new entries',
-            df['date']
-        ])
-        
-    # update add_df with new historical data
-    add_df = pl.concat([add_df, df], how= "diagonal")
-        
-
-    
 ## REAL INTEREST RATES, eoq, from FRED DFII10
-    active_workbook = \
-        load_workbook(filename= config.Fixed_locations().INPUT_RR_ADDR,
-                      read_only= True,
-                      data_only= True)
-    active_sheet = active_workbook[param.Update_param().SHT_RR_NAME]
-    real_rt_df = rd.fred_reader(active_sheet,
-                                **param.Update_param().SHT_FRED_PARAMS)
-
-
-               
-    # include rr in add_df
-    add_df = add_df.join(real_rt_df, 
-                         how="left", 
-                         on=[param.Update_param().YR_QTR_NAME],
+    add_df = add_df.join(rd.fred_reader(
+                                env.INPUT_RR_FILE,
+                                dates_to_update_set),
+                         how= 'left',
+                         on= param.YR_QTR_NAME,
                          coalesce= True)
     
-    del real_rt_df
-    del df
-    gc.collect()
-        
 ## MARGINS add to add_df
-    margins_df = rd.margin_loader(active_sheet,
-                                  rows_not_to_update_set,
-                                  **param.Update_param().SHT_BC_MARG_PARAMS)
-    
-    add_df = add_df.join(margins_df, 
+    add_df = add_df.join(rd.margin_loader(
+                                  latest_file,
+                                  dates_to_update_set), 
                          how="left", 
-                         on= param.Update_param().YR_QTR_NAME,
+                         on= param.YR_QTR_NAME,
                          coalesce= True)
     
-    del margins_df
-    gc.collect()
+    hp.my_df_print(add_df)
+    quit()
 
 ## QUARTERLY DATA add to add_df
     active_sheet = active_workbook[param.Update_param().SHT_QTR_NAME]

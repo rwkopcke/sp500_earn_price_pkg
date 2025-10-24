@@ -86,11 +86,11 @@ def update(record_dict, input_files_set):
     data_df = pl.DataFrame(list(new_files_set), 
                            schema= ["file"],
                            orient= 'row')\
-                .with_columns(pl.col('file')
+                .with_columns(pl.col.file
                         .map_batches(hp.file_to_date_str,
                                      return_dtype= pl.String)
                         .alias('date'))\
-                .with_columns(pl.col('date')
+                .with_columns(pl.col.date
                         .map_batches(hp.date_to_year_qtr,
                                      return_dtype= pl.String)
                         .alias(param.Update_param().YR_QTR_NAME))
