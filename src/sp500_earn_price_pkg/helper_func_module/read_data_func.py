@@ -99,24 +99,19 @@ def ensure_consistent_file_names(names_set):
             path_name,
             rd_param.SHT_EST_NAME)
         
-        # returns a list of lists
-        first_col_list = vals_from_row_col_array_in_xl_sheet(
-            sheet, min_row= 1, max_row= max,
-            start_col_ltr= date_col, 
-            stop_col_ltr= date_col)
+        # returns a simple list of vals in date_col
+        first_col_list = \
+            xlsx_block_reader(sheet, 
+                start_row= 1, stop_row= max,
+                first_col_ltr= date_col, 
+                last_col_ltr= date_col,
+                return_simple_list= True)
         
         # find file's date for file's name
-        for row in first_col_list:
-            
-            # col_date is list of lists that contain 1-item each
-            # cast_date returns value if not a date
-            # if a date, returns date_string in DATE_FMT
-            date_str = hp.cast_date_to_str(row[0])
-            
-            if hp.is_date(date_str, rd_param.DATE_FMT):
-                datetime.strptime(date_str, rd_param.DATE_FMT)
+        for item in first_col_list:
+            if hp.str_is_date(item, rd_param.DATE_FMT):
                 new_name_file = \
-                    f'{env.FILE_OUTPUT_WKBK_PREFIX} {date_str}.xlsx'
+                    f'{env.FILE_OUTPUT_WKBK_PREFIX} {item}.xlsx'
                 # add name to return set
                 output_sp_files_set.add(new_name_file)
                 # rename file
@@ -124,7 +119,7 @@ def ensure_consistent_file_names(names_set):
                 break
         
         # full inspection of col_date_list w/o finding a date
-        if not date_str:
+        if not item:
             hp.message([
                 'ERROR read_data_func.std_names for files',
                 'found no date in first {max} rows of',
@@ -151,136 +146,158 @@ def find_wk_sheet(file, sheet_name):
     return workbook[sheet_name]
 
 
-#def read_sheet_data(wksht,
-def vals_from_row_col_array_in_xl_sheet(
-        wksht, min_row= 1, max_row= 2,
-        start_col_ltr= 'A', stop_col_ltr= 'B'):
-    '''
-        fetch data from an xls worsheet
-        start_col and stop_col are letters
-        return array of values as a pl.DataFrame
-    '''
-
-    return [[cell.value for cell in row]
-             for row in wksht.iter_rows(
-                min_row= min_row, 
-                max_row= max_row,
-                min_col= ut_cell\
-                    .column_index_from_string(start_col_ltr), 
-                max_col= ut_cell\
-                    .column_index_from_string(stop_col_ltr))
-            ]
-
-def find_keys_in_xlsx(wksht,
-                      row_num= 1,
-                      col_ltr= 'A', 
-                      keys_to_find= None,
-                      is_row_iter= True,
-                      cell_list= None):
-    '''
-        this function scans a row or a col of wksht to
-            find the cell that displays an eligible key
-        keys: either None or a list of strings,
+def xlsx_block_reader(sheet, 
+                      start_row= 1, 
+                      stop_row= None,
+                      first_col_ltr= 'A', 
+                      last_col_ltr= None,
+                      skip_cols= None, 
+                      skip_rows= None,
+                      return_simple_list= False,
+                      cast_date_to_str= True):
+    """
+        Returns a rectangular block of data from an xlsx 
+            as a list of lists
+        From start_row to stop_row, start_col to stop_col
+            inclusive
+            skip_cols: a list of numbers
+            skip_cows: a list of numbers
+    """
+    if skip_cols is None:
+        skip_cols = []
+    if skip_rows is None:
+        skip_rows = []
         
-        start at cell specified by col_ltr, row_num.
-        if is_row_iter= True, iter "down" rows
-        if False, iter across cols
-        
-        when a match occurs, return row_num or col_ltr
-        when no match occurs, quit with message
+    # for scanning over rows, for a given col
+    if stop_row is None:
+        stop_row = sheet.max_row
+    
+    # for scanning over cols, for a given row
+    if last_col_ltr is None:
+        last_col_ltr = \
+            ut_cell.get_column_letter(sheet.max_column)
+    
+    rng = sheet[
+        f'{first_col_ltr}{start_row}:{last_col_ltr}{stop_row}']
+    
+    # list of lists
+    data = [[cell_.value
+             for c_idx, cell_ in enumerate(row)
+                 if c_idx not in skip_cols]  
+             for r_idx, row in enumerate(rng)
+                 if r_idx not in skip_rows]
+    
+    # option for key finding (not default)
+    if return_simple_list:
+        # list of items in column, each item is a 1-element list
+        # => convert to a simple list of the elements
+        # convert any temporal date to date_str
+        if first_col_ltr == last_col_ltr:
+            return [hp.cast_date_to_str(item[0])
+                    for item in data]
+    
+        # list containing 1 element, a list of items in the row
+        # => convert to a simple list by choosing that element
+        if start_row == stop_row:
+            return data[0]
+    
+    # otherwise, preserve the list-of-list structure
+    # with default option, cast dates in first col to str
+    if cast_date_to_str:    
+        for row in data:
+            row[0] = hp.cast_date_to_str(row[0])
+            
+    return data
+    
+
+def find_keys_in_list(cell_list, start_pos, keys_to_find):
     '''
-    if cell_list is None:
-        cell_list = []
-    if not isinstance(cell_list, list):
+        This function returns the first position of an item
+        in keys_to_find in the cell_list.
+        
+        Search starts at start_pos
+    '''
+    
+    for idx, val in enumerate(cell_list[start_pos:]):
+        if val is None:
+            if keys_to_find is None:
+                return idx + start_pos
+        else:
+            if keys_to_find is not None:
+                if val in keys_to_find:
+                    return idx + start_pos
+    
+    # if exhaust the list without finding key
+    hp.message([
+        f'In find_keys_in_list',
+        f'cell_list: {cell_list}',
+        f'start pos: {start_pos}',
+        f'keys to find: {keys_to_find}'
+    ])
+    quit() 
+        
+def key_finder(cell_list= None,
+               start_keys= ['no start key'],
+               stop_keys= ['no stop key']):
+    '''
+        Search along the cell_list
+        to find the cell that contains a value in
+        [start_keys], then the cell that contains
+        a value in [stop_keys]
+        
+        if the call specifies no start or stop keys
+        then this routine skips that search
+        
+        return the pos of the start and stop keys
+        in the list, 0-based indexing
+    '''
+    def send_error():
         hp.message([
-            'ERROR cell_list is not a list',
-            'In helper_func.py, find_key_in_xlsx(),',
-            f'cell_list: {cell_list}'])
+            'ERROR In read_data_func.py, key_finder()',
+            'sone of the inputs are not valid',
+            f'keys must be non-null list: \n{cell_list}',
+            f'start_keys must be [str] or None: {start_keys}',
+            f'stop_keys must be [str] or None: {stop_keys}'])
         quit()
         
-    # input array, convert dates to DATE_FMT atr
-    
-    if keys_to_find is not None:
-        # then keys must be a list of str or []
-        if ((type(keys_to_find) is not list)
-            or
-            (not all([type(item) is str 
-                      for item in keys_to_find]))
-            or
-            (not keys_to_find)):
-            hp.message([
-                'ERROR keys is not a list of str',
-                'In helper_func.py, find_key_in_xlsx(),',
-                f'keys: {keys_to_find}'])
-            quit()
-    
-    # initial values for iter loop
-    _, col_num = coordinate_to_tuple(f'{col_ltr}{row_num}')
-    
-    if is_row_iter:
-        max_row = wksht.max_row
-        max_col = col_num
-        max_to_read = max_row
-        start_index = row_num
+    if ((cell_list is None) or
+        (not cell_list) or
+        (not isinstance(cell_list, list))):
+        send_error()
+        
+    # start & stop keys must be lists of str or None
+    # then keys must be a list of str or []
+    if ((not isinstance(start_keys, list)) or
+        (not start_keys) or
+        (not all(isinstance(item, str) for item in start_keys))):
+        if (start_keys is not None):
+            send_error()
+        
+    if ((not isinstance(stop_keys, list)) or
+        (not stop_keys) or
+        (not all(isinstance(item, str) for item in stop_keys))):
+        if stop_keys is not None:
+            send_error()
+     
+    if start_keys == ['no start key']:
+        min_pos = None
     else:
-        max_col = wksht.max_column
-        max_row = row_num
-        max_to_read = max_col
-        start_index = col_num
-
-    max_to_read += 1
+        min_pos = find_keys_in_list(cell_list,
+                                    start_pos= 0,
+                                    keys_to_find= start_keys)
     
-    # list of lists that each have 1 element
-    if cell_list==[]:
-        cell_list = \
-            vals_from_row_col_array_in_xl_sheet(
-                wksht, 
-                min_row= row_num, max_row= max_row,
-                start_col_ltr= col_ltr, 
-                stop_col_ltr= 
-                    ut_cell.get_column_letter(max_col))
-    
-        # if searching first col, cast dates to DATE_FMT
-        if max_col == 1:
-            # col_date is list of lists that contain 1-item each
-            # cast dates to str; otherwise returns item as is
-            cell_list = [hp.cast_date_to_str(row[0])
-                        for row in cell_list]
-
-    # col search produces a list with one element:
-    # a list of the items in the search row
-    if not is_row_iter:
-        cell_list = cell_list[0]
-    
-    key_index = start_index
-    # py list index is 0-based; excel rows/cols are 1-based
-    for val in cell_list[start_index - 1: max_to_read]:
-        if keys_to_find is None:
-            if val is None:
-                break
+    if stop_keys == ['no stop key']:
+        max_pos = None
+    else:
+        if min_pos is None:
+            start_pos = 0
         else:
-            if val in keys_to_find:
-                break
-        key_index += 1
-    
-    # if exhausted the list without finding key
-    if key_index > (start_index + len(cell_list)):
-        hp.message([
-            f'In find_keys_in_xlsx',
-            f'worksheet: {wksht}',
-            f'start cell: {col_ltr}{row_num}',
-            f'keys to find: {keys_to_find}',
-            f'is row iteration: {is_row_iter}',
-            f'list of values: {cell_list}',
-            f'halting operation'
-        ])
-    
-    if is_row_iter:
-        return [key_index, cell_list]
-    else:
-        return [ut_cell.get_column_letter(key_index),
-                cell_list]
-    
+            start_pos = min_pos
+            max_pos = find_keys_in_list(cell_list,
+                                    start_pos= start_pos,
+                                    keys_to_find= stop_keys)
+    return [min_pos, max_pos]
+
 
 def read_existing_history():
     '''
@@ -333,85 +350,85 @@ def update_history(file, dates_set):
     price = rd_param.PRICE_NAME
     date = rd_param.DATE_NAME
     
-    if dates_set:
-        stop_keys = [min(dates_set)]
-    else:
-        stop_keys = None
+    # fetch list of data, from first col of sheet
+    # ensure all dates are expressed as strings
+    # returns a list of col_vals_list (one for each row),
+    # each col_vals_list contains 1 item, [value for col A]
+    cell_list = \
+        xlsx_block_reader(sheet, 
+                    start_row= 1,
+                    first_col_ltr= rd_param.WKBK_DATE_COL, 
+                    last_col_ltr= rd_param.WKBK_DATE_COL,
+                    return_simple_list= True)
 
-    # min_row and max_row are xl row indexes,
-    # not py list indexes (0-based)
-    [min_row, cell_list] = find_keys_in_xlsx(
-            sheet,
-            row_num= 1,
-            col_ltr= rd_param.WKBK_DATE_COL,
-            keys_to_find= rd_param.HISTORY_KEYS,
-            cell_list= [])
+    # stop_key: min date to read, a list of 1 str
+    if dates_set:
+        stop_key = [min(dates_set)]
+    else:
+        stop_key = None
+        
+    # find positions of start & stop keys in cell_list
+    [min_pos, max_pos] = \
+        key_finder(cell_list,
+                   start_keys= rd_param.HISTORY_KEYS,
+                   stop_keys= stop_key)
+    # offset to row below start_key, +1
+    # offset to adj python indexing to xlsx indexing, +q
+    min_row = min_pos + 2
+    max_row = max_pos + 1
     
-    [max_row, _] = find_keys_in_xlsx(
-            sheet,
-            row_num= min_row,
-            col_ltr= rd_param.WKBK_DATE_COL,
-            keys_to_find= stop_keys,
-            cell_list= cell_list)
-    
-    df = pl.DataFrame(vals_from_row_col_array_in_xl_sheet(
-                            sheet, 
-                            min_row= min_row + 1, 
-                            max_row= max_row,
-                            start_col_ltr= 
+    df = pl.DataFrame(xlsx_block_reader(sheet, 
+                         start_row= min_row, 
+                         stop_row= max_row,
+                         first_col_ltr= 
                                 rd_param.HIST_EPS_COL_START, 
-                            stop_col_ltr= 
+                         last_col_ltr= 
                                 rd_param.HIST_EPS_COL_STOP),
                 orient= 'row')\
-            .select(cs.by_dtype(pl.String, 
-                            pl.Float64))\
-            .cast({cs.float(): pl.Float32})\
-            .with_columns(cs.first().map_elements(
-                    hp.cast_date_to_str,
-                    return_dtype= pl.String))
+            .select(cs.by_dtype(pl.String, pl.Float64))\
+            .cast({cs.float(): pl.Float32})
     df.columns = rd_param.HIST_COLUMN_NAMES
     
+    '''
+            .with_columns(pl.col(date).map_elements(hp.cast_date_to_str,
+                                          return_dtype= pl.String))\
+            .with_columns(cs.first().map_elements(hp.cast_date_to_str,
+                                          return_dtype= pl.String))\
+    '''
+    
     recent_prices_df = pl.DataFrame(
-            vals_from_row_col_array_in_xl_sheet(
-                            sheet, 
-                            min_row= min_row - 4, 
-                            max_row= min_row - 2,
-                            start_col_ltr= 
+            xlsx_block_reader(sheet, 
+                            start_row= 
+                               min_row - rd_param.PRICE_OFFSET_1, 
+                            stop_row= 
+                               min_row - rd_param.PRICE_OFFSET_2,
+                            first_col_ltr= 
                                rd_param.PRICE_HST_COL_START, 
-                            stop_col_ltr= 
+                            last_col_ltr= 
                                rd_param.PRICE_HST_COL_STOP),
             schema = [date, price],
             orient= 'row')\
         .filter(~pl.col(price).is_null())\
-        .with_columns(
-            pl.col(date).map_elements(
-                hp.cast_date_to_str,
-                return_dtype= pl.String))\
         .cast( {price: pl.Float32})
         
-    [key_row_num, _] = find_keys_in_xlsx(
-            sheet,
-            row_num= 1,
-            col_ltr= rd_param.WKBK_DATE_COL,
-            keys_to_find= rd_param.PRICE_KEYS,
-            cell_list= cell_list)
+    key_pos_num = find_keys_in_list(cell_list,
+                            start_pos= 1,
+                            keys_to_find= rd_param.PRICE_KEYS)
+    # offset for py's 0-based indexing
+    key_row_num = key_pos_num + 1
     
-    [date_, price_] = vals_from_row_col_array_in_xl_sheet(
-                            sheet, 
-                            min_row= key_row_num, 
-                            max_row= key_row_num + 1,
-                            start_col_ltr= 
+    [date_, price_] = xlsx_block_reader(sheet, 
+                            start_row= key_row_num, 
+                            stop_row= key_row_num + 1,
+                            first_col_ltr= 
                                rd_param.PRICE_RCNT_COL, 
-                            stop_col_ltr= 
-                               rd_param.PRICE_RCNT_COL)
+                            last_col_ltr= 
+                               rd_param.PRICE_RCNT_COL,
+                            return_simple_list= True)
     current_price_df = \
         pl.DataFrame({date: date_,
                       price: price_},
                      orient= 'row')\
-          .with_columns(
-              pl.col(date).map_elements(
-                  hp.cast_date_to_str,
-                  return_dtype= pl.String))\
           .cast({price: pl.Float32})
     
     recent_prices_df = pl.concat(
@@ -442,8 +459,133 @@ def update_history(file, dates_set):
         ])
         quit()
 
+    return [df, cell_list]
+
+
+def margin_loader(file, dates_set, cell_list):
+    '''
+        read data from s&p excel worksheet
+        that contains history for margins
+        return df
+    '''
+    
+    sheet = find_wk_sheet(file, rd_param.SHT_EST_NAME)
+    
+    # find first row of block to be read
+    row_pos_num = find_keys_in_list(cell_list,
+                            start_pos= 1,
+                            keys_to_find= rd_param.MARG_KEYS)
+    # offset for py's 0-based indexing
+    row_pos_num += 1
+    
+    # find new cell_list along row_pos_num
+    cell_list_along_row = \
+        xlsx_block_reader(sheet, 
+                    start_row= row_pos_num, 
+                    stop_row= row_pos_num,
+                    first_col_ltr= rd_param.MARG_KEY_COL,
+                    return_simple_list= True)
+    # because first item in cell_list_along_row is the sequence
+    # col values across the row\
+   
+    [_, max_col] =\
+        key_finder(cell_list_along_row,
+                   start_keys= rd_param.MARG_KEYS,
+                   stop_keys= rd_param.MARG_STOP_COL_KEY)
+    
+    stop_col_ltr = ut_cell.get_column_letter(max_col)
+    
+    # list of lists
+    data = xlsx_block_reader(sheet, 
+                    start_row= row_pos_num, 
+                    stop_row= row_pos_num + rd_param.MARG_MAX_ROW_OFFSET,
+                    first_col_ltr= 
+                        rd_param.MARG_KEY_COL, 
+                    last_col_ltr= stop_col_ltr)
+     
+    # data_values omits the first row (col headers) from data
+    data_values = [row for row in data[1:]]
+    
+    # omit the * for 2008, take first entry (yr) in list data[0]
+    col_names = [str(item).split('*')[0] for item in data[0]]
+    qtrs = col_names[0]
+    
+    # build "tall" 2-col DF with 'year_qtr' and 'margin'
+    df = pl.DataFrame(data_values, 
+                      schema= col_names,
+                      orient= 'row')\
+                .with_columns(pl.col(qtrs)
+                              .map_elements(lambda x: x.split(' ')[0],
+                                            return_dtype= str))\
+                .cast({cs.float(): pl.Float32})\
+                .unpivot(index= qtrs, variable_name= rd_param.ANNUAL_DATE)
+            # index: names of cols to remain cols
+            # variable_name: name of col to contain names of cols pivoted
+    
+    df = df.with_columns(
+                pl.struct([qtrs, rd_param.ANNUAL_DATE])\
+                    .map_elements(lambda x: 
+                            (f"{x[rd_param.ANNUAL_DATE]}-{x[qtrs]}"),
+                             return_dtype= pl.String)\
+                    .alias(rd_param.YR_QTR_NAME))\
+            .drop([rd_param.ANNUAL_DATE, qtrs])\
+            .rename({'value': 'op_margin'})
+            
     return df
 
+def qtrly_loader(file, dates_set):
+    '''
+    '''
+    sheet = find_wk_sheet(file, rd_param.SHT_QTR_NAME)
+    
+    # find values down the rows
+    cell_list = \
+        xlsx_block_reader(sheet, 
+                    start_row= 1,
+                    stop_row= rd_param.QTR_INIT_ROW_ITER,
+                    first_col_ltr= rd_param.QTR_HST_COL_START, 
+                    last_col_ltr= rd_param.QTR_HST_COL_START,
+                    return_simple_list= True)
+    
+    # stop_key: min date to read
+    if dates_set:
+        stop_key = [min(dates_set)]
+    else:
+        stop_key = None
+
+    [min_row, max_row] = key_finder(cell_list,
+                                    start_keys= rd_param.QTR_START_KEYS,
+                                    stop_keys= stop_key)
+    # offset 1 for 0-based list index; 1 for row below key
+    min_row += 2
+    # max_row offset is 1
+    max_row += 1
+    
+    df = pl.DataFrame(xlsx_block_reader(sheet, 
+                            start_row= min_row, 
+                            stop_row= max_row,
+                            first_col_ltr= 
+                                rd_param.QTR_HST_COL_START, 
+                            last_col_ltr= 
+                                rd_param.QTR_HST_COL_STOP,
+                            skip_cols= rd_param.QTR_COL_TO_SKIP),
+                      orient= 'row')
+    
+    '''
+             .with_columns(cs.first().map_elements(
+                    hp.cast_date_to_str,
+                    return_dtype= pl.String))
+    '''
+    
+    df.columns = rd_param.QTR_COLUMN_NAMES
+    
+    return df.with_columns(pl.col(rd_param.DATE_NAME).map_batches(
+                        hp.date_to_year_qtr, 
+                        return_dtype= pl.String)
+                    .alias(rd_param.YR_QTR_NAME))\
+             .cast({cs.float(): pl.Float32})\
+             .drop(pl.col(rd_param.DATE_NAME))
+   
 
 def fred_reader(file, dates_set):
     '''
@@ -462,21 +604,22 @@ def fred_reader(file, dates_set):
     # end of qtr data in Fred is dated with the
     # first day of the quarter => convert to yrqtr
     # and drop the dates asap
-    df = pl.DataFrame(
-            vals_from_row_col_array_in_xl_sheet(
-                        sheet, 
-                        min_row= rd_param.RR_MIN_ROW, 
-                        max_row= sheet.max_row,
-                        start_col_ltr= rd_param.RR_START_COL, 
-                        stop_col_ltr= rd_param.RR_STOP_COL),
+    '''
+        .with_columns(
+            pl.col(date).map_elements(
+                hp.cast_date_to_str,
+                return_dtype= pl.String))
+    '''
+    return pl.DataFrame(
+            xlsx_block_reader(sheet, 
+                        start_row= rd_param.RR_MIN_ROW, 
+                        stop_row= sheet.max_row,
+                        first_col_ltr= rd_param.RR_START_COL, 
+                        last_col_ltr= rd_param.RR_STOP_COL),
             schema = rd_param.RR_DF_SCHEMA,
             orient= 'row')\
         .filter(~pl.col(rr).is_null())\
         .cast({rr: pl.Float32})\
-        .with_columns(
-            pl.col(date).map_elements(
-                hp.cast_date_to_str,
-                return_dtype= pl.String))\
         .with_columns(pl.col(date)
                 .map_batches(hp.date_to_year_qtr,
                              return_dtype= pl.String)
@@ -487,147 +630,88 @@ def fred_reader(file, dates_set):
         .sort(by= yr_qtr)\
         .drop(pl.col(date))
         
-    return df
 
-
-def margin_loader(file, dates_set):
-    '''
-        read data from s&p excel worksheet
-        that contains history for margins
-        return df
-    '''
-    
-    sheet = find_wk_sheet(file, rd_param.SHT_EST_NAME)
-    
-    [min_row, _] = find_keys_in_xlsx(sheet,
-                          row_num= 1, 
-                          col_ltr= 'A', 
-                          keys_to_find= rd_param.MARG_KEYS)
-    [stop_col_ltr, _] = find_keys_in_xlsx(sheet,
-                          row_num= min_row, 
-                          col_ltr= 'A', 
-                          keys_to_find= None,
-                          is_row_iter= False)
-    
-    stop_col_ltr = ut_cell.get_column_letter(
-        ut_cell.column_index_from_string(stop_col_ltr) - 1)
-    
-    # list of lists
-    data = vals_from_row_col_array_in_xl_sheet(
-                            sheet, 
-                            min_row= min_row, 
-                            max_row= min_row + 4,
-                            start_col_ltr= 
-                                rd_param.MARG_KEY_COL, 
-                            stop_col_ltr= stop_col_ltr)
-     
-    # data_values omits the first row (col headers) from data
-    data_values = [row for row in data[1:]]
-    
-    # omit the * for 2008, take first entry (yr) in list data[0]
-    col_names = [str(item).split('*')[0] for item in data[0]]
-    qtrs = col_names[0]
-    
-    # build "tall" 2-col DF with 'year_qtr' and 'margin'
-    df = pl.DataFrame(data_values, 
-                      schema= col_names,
-                      orient= 'row')\
-                .with_columns(pl.col(qtrs)
-                              .map_elements(lambda x: x.split(' ')[0],
-                                            return_dtype= str))\
-                .cast({cs.float(): pl.Float32})\
-                .unpivot(index= qtrs, variable_name='year')
-            # index: names of cols to remain cols
-            # variable_name: name of col to contain names of cols pivoted
-    
-    df = df.with_columns(
-                pl.struct([qtrs, 'year'])\
-                    .map_elements(lambda x: 
-                                  (f"{x['year']}-{x[qtrs]}"),
-                                  return_dtype= pl.String)\
-                    .alias(rd_param.YR_QTR_NAME))\
-            .drop(['year', qtrs])\
-            .rename({'value': 'op_margin'})
-            
-    return df
-
-    
-#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-
-def data_block_reader(wksht, 
-                      start_row, stop_row,
-                      first_col, last_col, 
-                      skip_cols= [], skip_rows= []):
-    """
-        Returns a rectangular block of data from an xlsx 
-            as a list of lists
-        From start_row to stop_row, start_col to stop_col
-            inclusive
-            skip_cols: a list of numbers
-            skip_cows: a list of numbers
-    """
-    
-    rng = wksht[f'{first_col}{start_row}:{last_col}{stop_row}']
-    
-    data = [[cell_.value
-             for c_idx, cell_ in enumerate(row)
-                 if c_idx not in skip_cols]  
-             for r_idx, row in enumerate(rng)
-                 if r_idx not in skip_rows]
-    
-    return data
-
-
-def industry_loader(wksht, years_no_update,
-                    first_row_op, first_row_rep, num_inds,
-                    start_col_key, stop_col_key):
+def industry_loader(file, years_no_update_set):
     '''
         read data from s&p excel worksheet
         that contains history for industry data
         return df
     ''' 
+    sheet = find_wk_sheet(file, rd_param.SHT_IND_NAME)
     
-## +++++ read industries from 1st col
-    last_row_op = first_row_op + num_inds + 1
-    ind = data_block_reader(wksht, first_row_op + 2, 
-                            last_row_op, 'A', 'A')
+## +++++ read names of industries from 1st col
+## find start and stop rows for data block
+    cell_list = \
+        xlsx_block_reader(sheet, 
+                    start_row= 1,
+                    stop_row= rd_param.IND_INIT_ROW_ITER,
+                    first_col_ltr= rd_param.IND_SRCH_COL, 
+                    last_col_ltr= rd_param.IND_SRCH_COL,
+                    return_simple_list= True,
+                    cast_date_to_str= False)
+        
+    # find positions of start & stop keys in cell_list
+    [min_pos, max_pos] = \
+        key_finder(cell_list,
+                   start_keys= rd_param.IND_OP_START_KEYS,
+                   stop_keys= rd_param.IND_OP_STOP_KEYS)
+        
+    # offset to row below start_key, +1
+    # offset to adj python indexing to xlsx indexing,
+    start_row = min_pos + 1
+    stop_row = max_pos
+    
     # remove parentheticals
-    ind = [item[0].split(' (')[0]
-           for item in ind]
+    ind = [item.split(' (')[0]
+           for item in cell_list[min_pos:max_pos]]
+
     # remove 'S&P 500' and replace space with '_'
     ind_name = ['_'.join(item.rstrip().split(' ')[2:])
                 for item in ind]
-    # set first name to 'SP500'
-    ind_name[0] = 'SP500'
-                        
-## +++++  read data  +++++
-    # search the first row of data
-    # 2nd block, bracketed by default key None
-    # read the last three years of data
+    # set first name
+    ind_name[0] = rd_param.FIRST_IND_NAME
     
-    # key value is None (col before 1st number to read)
-    first_col_num = 1 + hp.find_key_col(wksht, first_row_op + 2,
-                                        start_col= 3)
-    # skip years not to update
-    first_col_num += 2 * len(years_no_update)\
+## +++++  find data ids ++++++++++++++++++++
+## find first and last col letters for block data
+    # search the first row of dates (offset -2)
+    # for years that are not in years_no_update_set
+    # get data from row with years in the cols
     
-    first_col = ut_cell.get_column_letter(first_col_num)
+    cell_list_from_cols = \
+        xlsx_block_reader(sheet, 
+                    start_row= start_row + rd_param.IND_OFFSET,
+                    stop_row= start_row + rd_param.IND_OFFSET,
+                    first_col_ltr= rd_param.IND_DATA_START_COL,
+                    return_simple_list= True,
+                    cast_date_to_str= False)
+
+    [min_pos, max_pos] = \
+        key_finder(cell_list_from_cols,
+                   start_keys= rd_param.IND_DATA_FIRST_COL_KEY,
+                   stop_keys= rd_param.IND_DATA_LAST_COL_KEY)
+        
+    # search list for first year that is not in years_no_update_set
+    max_year_no_update = max(years_no_update_set)
+
+    min_pos_2 = min_pos - 1
+    while min_pos_2 <= max_pos:
+        min_pos_2 += 1
+        if cell_list_from_cols[min_pos_2][:4] > max_year_no_update:
+            break
     
-    # key_value is None
-    last_col_num = -1 + hp.find_key_col(wksht, first_row_op + 2, 
-                                        start_col= first_col_num)
+    # includes correction for list 0-based indexing
+    min_pos_xlsx_col = \
+          min_pos_2 + rd_param.IND_DATA_START_COL_OFFSET + 1
+    max_pos_xlsx_col = \
+         max_pos + rd_param.IND_DATA_START_COL_OFFSET
+        
+    first_col_ltr = ut_cell.get_column_letter(min_pos_xlsx_col)
+    last_col_ltr = ut_cell.get_column_letter(max_pos_xlsx_col)
     
-    last_col = ut_cell.get_column_letter(last_col_num)
-   
-## op data
-    # fetch op e by industry, including row with headings
-    # list of lists for each row
-    data = data_block_reader(wksht, first_row_op, last_row_op,
-                             first_col, last_col)
-    
+    # get names for data
     date_data_names = [f'{name[:4]} {name[-3:]}'
-                       for name in data[0]]
-    
+                       for name in 
+                       cell_list_from_cols[min_pos_2:max_pos]]
     columns_pe = [col
                   for col in date_data_names
                   if 'P/E' in col]
@@ -635,51 +719,63 @@ def industry_loader(wksht, years_no_update,
                  for col in date_data_names
                  if 'EPS' in col]
     years = [item[0:4] for item in columns_e]
+    
+## ++++++++++++ op data +++++++++++++++++
+    # fetch op e by industry, including row with headings
+    # list of lists for each row
+    earn_type = rd_param.OP_EPS
+    ratio_type = rd_param.OP_PE
+    
+    df = separate_pivot_combine_eps_pe_df(sheet, 
+            start_row, stop_row, first_col_ltr, last_col_ltr,
+            ind_name, date_data_names, columns_pe, columns_e, 
+            years, earn_type, ratio_type)
+    
+## ++++++++++++ rep data +++++++++++++++++
+    start_row += rd_param.IND_REP_OFFSET_KEYS
+    stop_row = stop_row + rd_param.IND_REP_OFFSET_KEYS
+    earn_type = rd_param.REP_EPS
+    ratio_type = rd_param.REP_PE
+    
+    gf = separate_pivot_combine_eps_pe_df(sheet, 
+            start_row, stop_row, first_col_ltr, last_col_ltr,
+            ind_name, date_data_names, columns_pe, columns_e, 
+            years, earn_type, ratio_type)
 
-    # use only rows with data
-    gf = pl.DataFrame(data[2:], schema= date_data_names,
-                      orient= 'row')\
-           .cast({cs.float(): pl.Float32})
-    
-    # select and pivot to years for rows, data type for cols
-    gf_pe = hp.gen_sub_df(gf, ind_name, '_op_pe', 
-                          columns_pe, years)
-    gf_e  = hp.gen_sub_df(gf, ind_name, '_op_eps', 
-                          columns_e, years)
-    
-    df = gf_e.join(gf_pe,
-                   on= 'year',
+## ++++++++++++ Combine OP and REP +++++++
+    df = df.join(gf,
+                   on= rd_param.ANNUAL_DATE,
                    how= 'left',
                    coalesce= True)
-    
-## rep data
-    last_row_rep = first_row_rep + num_inds - 1
-    
-    ## +++++  read data  +++++
-    # fetch rep e by industry
-    # list of lists for each row
-    # no skips rows or year/type data
-    data = data_block_reader(wksht, first_row_rep, last_row_rep,
-                             first_col, last_col)
-
-    gf = pl.DataFrame(data, schema= date_data_names,
-                      orient= 'row')\
-           .cast({cs.float(): pl.Float32})
-
-    # select and pivot to years for rows, data type for cols
-    gf_pe = hp.gen_sub_df(gf, ind_name, '_rep_pe', 
-                          columns_pe, years)
-    gf_e  = hp.gen_sub_df(gf, ind_name, '_rep_eps', 
-                          columns_e, years)
-    
-    df = df.join(gf_e,
-                   on= 'year',
-                   how= 'left',
-                   coalesce= True)\
-           .join(gf_pe,
-                 on= 'year',
-                 how= 'left',
-                 coalesce= True)
-    
     return df
 
+
+def separate_pivot_combine_eps_pe_df(sheet, 
+        start_row, stop_row, first_col_ltr, last_col_ltr,
+        ind_name, date_data_names, columns_pe, columns_e, 
+        years, earn_type, ratio_type):
+    '''
+    '''
+    data = xlsx_block_reader(sheet, 
+                             start_row= start_row,
+                             stop_row= stop_row,
+                             first_col_ltr= first_col_ltr,
+                             last_col_ltr= last_col_ltr,
+                             return_simple_list= False,
+                             cast_date_to_str= False)
+
+    df = pl.DataFrame(data, 
+                      schema= date_data_names,
+                      orient= 'row')\
+           .cast({cs.float(): pl.Float32})
+    
+    # select and pivot to years for rows, data type for cols
+    df_pe = hp.gen_sub_df(df, ind_name, ratio_type, 
+                          columns_pe, years)
+    df_e  = hp.gen_sub_df(df, ind_name, earn_type, 
+                          columns_e, years)
+    
+    return df_e.join(df_pe,
+                   on= rd_param.ANNUAL_DATE,
+                   how= 'left',
+                   coalesce= True)

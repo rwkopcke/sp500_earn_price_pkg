@@ -20,9 +20,13 @@ class Update_param:
 
 # data for sp files and actual df
     DATE_NAME = 'date'
-    PRICE_NAME = 'price'
-    RR_NAME = 'real_int_rate'
     YR_QTR_NAME = 'yr_qtr'
+    ANNUAL_DATE = 'year'
+    
+    PRICE_NAME = 'price'
+    
+    RR_NAME = 'real_int_rate'
+    
     PROJ_PREFIX_OUTPUT_FILE = 'sp-500-eps-est'
     EXT_OUTPUT_FILE_NAME = '.parquet'
     
@@ -34,6 +38,9 @@ class Update_param:
     
 # keys for history eps and price
     HISTORY_KEYS = ['ACTUALS', 'Actuals']
+    PRICE_OFFSET_1 = 4
+    PRICE_OFFSET_2 = 2
+    
     HIST_EPS_COL_START = 'A'
     HIST_EPS_COL_STOP = 'J'
     
@@ -45,52 +52,55 @@ class Update_param:
     ESTIMATES_KEYS = ['ESTIMATES']
     END_KEY = ['END']
     
+# data for margins
+    MARG_KEYS = ['QTR']
+    MARG_KEY_COL= 'A'
+    MARG_MAX_ROW_OFFSET= 4
+    MARG_STOP_COL_KEY= None
+
+# data from sp quarterly wksht
+    SHT_QTR_NAME = "QUARTERLY DATA"
+    QTR_INIT_ROW_ITER = 10
+    QTR_START_KEYS = ['END']
+    QTR_HST_COL_START = 'A'
+    QTR_HST_COL_STOP = 'I'
+    QTR_COLUMN_NAMES = [DATE_NAME, 'div_ps', 'sales_ps',
+                        'bk_val_ps', 'capex_ps', 'divisor']
+    QTR_COL_TO_SKIP = [1, 2, 7]
+    
 # data from FRED wksht
     SHT_RR_NAME = 'Quarterly'
     RR_MIN_ROW = 2
     RR_START_COL = 'A'
     RR_STOP_COL = 'B'
     RR_DF_SCHEMA = [DATE_NAME, RR_NAME]
-    
-# data for margins
-    MARG_KEYS = ['QTR']
-    MARG_KEY_COL= 'A'
-    MARG_MAX_ROW_OFFSET= 4
-    MARG_START_COL = 'B'
-    MARG_STOP_COL_KEY= None
-
-# data from sp quarterly wksht
-    SHT_QTR_NAME = "QUARTERLY DATA"
-    QTR_COLUMN_NAMES = [DATE_NAME, 'div_ps', 'sales_ps',
-                        'bk_val_ps', 'capex_ps', 'divisor']
 
 # data from sp industry wksht
     SHT_IND_NAME = 'SECTOR EPS'
+    FIRST_IND_NAME = 'SP500'
     
-    # NB ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    # all search (row or col) "keys" should be None or lists
-    # all column indexes in skip lists below are zero-based ('A' is 0)
-    # all specific individual column designations are letters
-    # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    IND_SRCH_COL = 'A'
+    IND_INIT_ROW_ITER = 30
+    
+    IND_OP_START_KEYS = ['S&P 500']
+    IND_OP_STOP_KEYS = None
+    IND_OFFSET = -2
+
+    IND_REP_OFFSET_KEYS = 55
+    
+    IND_DATA_FIRST_COL_KEY = ['2008 EPS']
+    IND_DATA_LAST_COL_KEY = None
+    IND_DATA_START_COL = 'D'
+    IND_DATA_START_COL_OFFSET = 3
+
+    OP_EPS = '_op_eps'
+    OP_PE = '_op_pe'
+    REP_EPS = '_rep_eps'
+    REP_PE = '_rep_pe'
+    
     
 
-    SHT_IND_PARAMS = {
-        'first_row_op': 6,
-        'first_row_rep': 63,
-        'num_inds': 12,
-        'start_col_key': None,
-        'stop_col_key': None
-    }
-
-    SHT_QTR_PARAMS = {
-        'act_key' : END_KEY,
-        'end_key' : None,
-        'first_col' : 'A',
-        'last_col' : 'I',
-        'skip_cols' : [1, 2, 7],
-        'column_names' : QTR_COLUMN_NAMES,
-        'yr_qtr_name' : YR_QTR_NAME
-    }
+    
 
     SHT_EST_PROJ_DATE_PARAMS = {
         'date_keys' :  PRICE_KEYS,

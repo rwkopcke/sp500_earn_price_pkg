@@ -40,17 +40,17 @@ def cast_date_to_str(val):
     
     # if val contains valid str date, convert to datetime
     if isinstance(val, str):
-        #isolates the date, if exists     
-        date_ = str_is_date(val.split(" ")[0], 
-                            rd_param.DATE_FMT_SP_WKBK,
-                            rd_param.DATE_FMT)
-        return date_  # either date as str or val
+        #isolates the date, if exists  
+        return str_to_date(val, 
+                        rd_param.DATE_FMT_SP_WKBK,
+                        rd_param.DATE_FMT)
+        # either date as str
     return val
         
 
-def str_is_date(val, date_fmt, proj_date_fmt):
+def str_to_date(val, date_fmt, proj_date_fmt):
     '''
-        Receive str and date_format str
+        Receive datetime and date_format str
         If val is str that can be cast to a date
             using date_fmt,
         Return date as str
@@ -58,24 +58,28 @@ def str_is_date(val, date_fmt, proj_date_fmt):
         Otherwise,
             Return empty str obj
     '''
-    date_ = is_date(val, date_fmt)
-    if date_:
-        return date_.strftime(proj_date_fmt)
-    else:
+    val_ = val.split(" ")[0]
+    try:
+        date_ = datetime.strptime(val_, date_fmt)
+        return datetime.strftime(date_, proj_date_fmt)
+    except Exception as e:
         return val
     
     
-def is_date(val, date_fmt):
+def str_is_date(val, proj_date_fmt):
     '''
-        Returns empty string if val is not
-        specified date_str
+        checks if:
+            val is str that matches DATE_FMT
+            can be interpreted as a valid datetime obj
+        if so, returns True; otherwise, False
     '''
     try:
-        date_ = datetime.strptime(val, date_fmt)
-        return date_
+        val == \
+        datetime.strptime(val, proj_date_fmt)\
+                .strftime(proj_date_fmt)
+        return True
     except Exception as e:
-        # print(e)
-        return ""
+        return False
     
     
 def file_to_date_str(series):
@@ -87,10 +91,6 @@ def file_to_date_str(series):
     return pl.Series(
         [(f_name.split(' ', 1)[1]).split('.', 1)[0]
          for f_name in series])
-    
-
-# def item_to_date_str(series):
-    
     
     
 def date_to_year_qtr(series):

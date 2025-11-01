@@ -154,11 +154,36 @@ def update():
     
 ## NEW HISTORICAL DATA from latest sp file
     # activate latest xlsx wkbk and sheet with data for sp
-    add_df = rd.update_history(
-        latest_file,
-        dates_to_update_set)
+    [add_df, cell_list] = rd.update_history(
+                                latest_file,
+                                dates_to_update_set)
+    print('upd history')
+    hp.my_df_print(add_df)
     
-## REAL INTEREST RATES, eoq, from FRED DFII10
+## MARGINS add to add_df
+    add_df = add_df.join(rd.margin_loader(
+                                  latest_file,
+                                  dates_to_update_set,
+                                  cell_list), 
+                         how="left", 
+                         on= param.YR_QTR_NAME,
+                         coalesce= True)
+    print('upd marg')
+    hp.my_df_print(add_df)
+
+## QUARTERLY DATA add to add_df
+    # ensure all dtypes (if not string or date-like) are float32
+    # some dtype are null when all col entries in short df are null
+    add_df = add_df.join(rd.qtrly_loader(latest_file,
+                                         dates_to_update_set),  
+                    how= "left", 
+                    on= [param.YR_QTR_NAME],
+                    coalesce= True)
+    
+    print('upd qtrly')
+    hp.my_df_print(add_df)
+    
+# REAL INTEREST RATES, eoq, from FRED DFII10
     add_df = add_df.join(rd.fred_reader(
                                 env.INPUT_RR_FILE,
                                 dates_to_update_set),
@@ -166,52 +191,25 @@ def update():
                          on= param.YR_QTR_NAME,
                          coalesce= True)
     
-## MARGINS add to add_df
-    add_df = add_df.join(rd.margin_loader(
-                                  latest_file,
-                                  dates_to_update_set), 
-                         how="left", 
-                         on= param.YR_QTR_NAME,
-                         coalesce= True)
-    
+    print('upd rr')
     hp.my_df_print(add_df)
-    quit()
-
-## QUARTERLY DATA add to add_df
-    active_sheet = active_workbook[param.Update_param().SHT_QTR_NAME]
-
-    # ensure all dtypes (if not string or date-like) are float32
-    # some dtype are null when all col entries in short df are null
-    qtrly_df = rd.sp_loader(active_sheet,
-                            rows_not_to_update_set,
-                            **param.Update_param().SHT_QTR_PARAMS)\
-                 .cast({~(cs.temporal() | cs.string()): pl.Float32,
-                        cs.datetime(): pl.Date})
-    
-    add_df = add_df.join(qtrly_df,  
-                         how= "left", 
-                         on= [param.Update_param().YR_QTR_NAME],
-                         coalesce= True)
-    
-    del qtrly_df
-    gc.collect()
     
 ## ACTUAL_DF update: remove rows to be updated and concat with add_df
     # align cols of actual_df with add_df
     # ensure rows do not overlap
-    
-    if config.Fixed_locations().OUTPUT_HIST_ADDR.exists():
-        actual_df = \
-            pl.concat([add_df.filter(
-                               ~pl.col(param.Update_param().YR_QTR_NAME)
-                               .is_in(rows_not_to_update_set)),
-                        actual_df.select(add_df.columns)
-                                .filter(pl.col(param.Update_param().YR_QTR_NAME)
-                                .is_in(rows_not_to_update_set))],
-                        how= 'vertical')\
-                      .sort(by= param.Update_param().YR_QTR_NAME)
+    if actual_df.is_empty():
+        actual_df = add_df.sort(by= param.YR_QTR_NAME)
     else:
-        actual_df = add_df.sort(by= param.Update_param().YR_QTR_NAME)
+        actual_df = \
+            pl.concat([add_df,
+                        actual_df.select(add_df.columns)
+                                .filter(~pl.col(param.DATE_NAME)
+                                .is_in(dates_to_update_set))],
+                        how= 'vertical')\
+                      .sort(by= param.YR_QTR_NAME)
+        
+    print('upd actual')
+    hp.my_df_print(actual_df)
     
     del add_df
     gc.collect()
@@ -221,47 +219,62 @@ def update():
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     # read stored data
-    if config.Fixed_locations().OUTPUT_IND_ADDR.exists():
-        ind_df = pl.read_parquet(config.Fixed_locations().OUTPUT_IND_ADDR)\
-                        .sort(by= 'year', descending= True)
+    if env.OUTPUT_IND_ADDR.exists():
+        ind_df = pl.read_parquet(env.OUTPUT_IND_ADDR)\
+                   .sort(by= param.ANNUAL_DATE, descending= True)
                     
-        years_no_update = set(pl.Series(ind_df
+        years_no_update_set = set(pl.Series(ind_df
                                 .drop_nulls(subset='SP500_rep_eps')
-                                .select(pl.col('year')))
+                                .select(pl.col(param.ANNUAL_DATE)))
                                 .to_list())
     else:
-        years_no_update = []
+        years_no_update_set = set()
+        
+    print('ind_df')
+    hp.my_df_print(ind_df)
     
     # find new industry data
-    active_sheet = active_workbook[param.Update_param().SHT_IND_NAME]
-    add_ind_df = rd.industry_loader(active_sheet,
-                                    years_no_update,
-                                    **param.Update_param().SHT_IND_PARAMS)
+    add_ind_df = rd.industry_loader(latest_file,
+                                    years_no_update_set)
+    
+    print('upd ind')
+    hp.my_df_print(add_ind_df)
+    
     # add col with Q4 value of real_int_rate each year from actual_df
+    rr_schema = [param.YR_QTR_NAME, param.RR_NAME]
     add_ind_df = add_ind_df.join(
-                 actual_df.select([param.Update_param().YR_QTR_NAME, 'real_int_rate'])
-                          .filter(pl.col(param.Update_param().YR_QTR_NAME)
-                                    .map_elements(lambda x: x[-1:]=='4',
+                    actual_df.select(rr_schema)
+                             .filter(pl.col(param.YR_QTR_NAME)
+                                       .map_elements(lambda x: x[-1:]=='4',
                                                 return_dtype= bool))
-                          .with_columns(pl.col(param.Update_param().YR_QTR_NAME)
+                             .with_columns(pl.col(param.YR_QTR_NAME)
                                     .map_elements(lambda x: x[0:4],
                                                 return_dtype= str)
-                                    .alias('year'))
-                          .drop(param.Update_param().YR_QTR_NAME),
-                 on= 'year',
-                 how= 'left',
-                 coalesce= True)\
-            .sort(by= 'year', descending= True)\
+                                    .alias(param.ANNUAL_DATE))
+                             .drop(param.YR_QTR_NAME),
+                    on= param.ANNUAL_DATE,
+                    how= 'left',
+                    coalesce= True)\
+            .sort(by= param.ANNUAL_DATE, descending= True)\
             .cast({~cs.string() : pl.Float32})
+            
+    print('upd rr')
+    hp.my_df_print(add_ind_df)
     
-    if config.Fixed_locations().OUTPUT_IND_ADDR.exists():
-        years = pl.Series(add_ind_df['year']).to_list()
-        ind_df = pl.concat([add_ind_df,
-                            ind_df.filter(~pl.col('year')
-                                            .is_in(years))],
-                            how= 'vertical')
+    if ind_df.is_empty():
+        ind_df = add_ind_df.sort(by= param.ANNUAL_DATE, 
+                                 descending= True)
     else:
-        ind_df = add_ind_df.sort(by= 'year', descending= True)
+        years = pl.Series(add_ind_df[param.ANNUAL_DATE]).to_list()
+        ind_df = pl.concat([add_ind_df,
+                            ind_df.filter(
+                                ~pl.col(param.ANNUAL_DATE)
+                                   .is_in(years))],
+                            how= 'vertical')
+        
+    print('upd ind_df')
+    hp.my_df_print(ind_df)
+    quit()
         
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## +++++ write history, industry files  ++++++++++++++++++++++++++++++++++++

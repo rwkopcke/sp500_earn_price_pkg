@@ -129,14 +129,7 @@ def update(record_dict, input_files_set):
 # UPDATE record_dict
     used_files_list = sorted(list(used_files_set), reverse= True)
     record_dict['latest_file'] = used_files_list[0]
-    '''
-    used_files_dates_list = \
-        pl.Series(data_df.select(pl.col('file').map_batches(
-                                        hp.file_to_date_str, 
-                                        return_dtype= pl.String)
-                                 )
-                  ).to_list()
-    '''
+    
     record_dict['prev_used_files'] = used_files_list
         
     record_dict['sources']['s&p'] = \
