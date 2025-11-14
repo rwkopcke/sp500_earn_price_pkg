@@ -9,15 +9,11 @@
 import polars as pl
 import matplotlib.pyplot as plt
 
-from sp500_earn_price_pkg.principal_scripts.code_segments.display_data \
-    import read_data_for_display as read
-from sp500_earn_price_pkg.principal_scripts.code_segments.display_data \
-    import plot_func as pf
+from .code_segments.display_data import read_data_for_display as read
+from .code_segments.display_data import plot_func as pf
     
-from sp500_earn_price_pkg.helper_func_module \
-    import display_helper_func as dh
-from sp500_earn_price_pkg.helper_func_module \
-    import helper_func as hp
+from ..helper_func_module import display_helper_func as dh
+from ..helper_func_module import helper_func as hp
     
 import sp500_earn_price_pkg.config.config_paths as config
 import sp500_earn_price_pkg.config.set_params as params
@@ -25,15 +21,13 @@ import sp500_earn_price_pkg.config.set_params as params
 env = config.Fixed_locations()
 param = params.Display_param()
 
-
-# ================  MAIN =============================================+
-
 # https://mateuspestana.github.io/tutorials/pandas_to_polars/
 # https://www.rhosignal.com/posts/polars-pandas-cheatsheet/
 # https://www.rhosignal.com/tags/polars/
 # https://jrycw.github.io/ezp2p/
 # https://docs.pola.rs/py-polars/html/reference/dataframe/api/polars.DataFrame.filter.html
 # https://fralfaro.github.io/DS-Cheat-Sheets/examples/polars/polars/
+
 
 def display():
     

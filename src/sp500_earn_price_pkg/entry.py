@@ -1,15 +1,16 @@
+# import principal scripts
+from sp500_earn_price_pkg.principal_scripts import (
+        update_data, 
+        display_data,
+        display_ind_data
+        )
+
+
 def main():
     '''
         Calls the three main scripts that produce this
         project's data and displays
     '''
-    
-    # import main scripts
-    from sp500_earn_price_pkg.principal_scripts import (
-        update_data, 
-        display_data,
-        display_ind_data
-    )
 
     action_dict = {
         "0": 'Update data from recent S&P and FRED workbooks',
@@ -44,3 +45,4 @@ def main():
         if choice not in ['T', 't', 'True', 'Y', 'y', 'yes']:
             print(f'{choice} End process.')
             quit()
+            

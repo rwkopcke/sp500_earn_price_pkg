@@ -26,15 +26,11 @@
 import polars as pl
 import polars.selectors as cs
 
-from sp500_earn_price_pkg.principal_scripts.code_segments\
-    .update_data import update_record
+from .code_segments.update_data import update_record
 
-from sp500_earn_price_pkg.helper_func_module \
-    import helper_func as hp
-from sp500_earn_price_pkg.principal_scripts.code_segments\
-    .update_data import read_data as read
-from sp500_earn_price_pkg.principal_scripts.code_segments\
-    .update_data import write_data_to_files as write
+from ..helper_func_module import helper_func as hp
+from .code_segments.update_data import read_data as read
+from .code_segments.update_data import write_data_to_files as write
 
 import sp500_earn_price_pkg.config.config_paths as config
 import sp500_earn_price_pkg.config.set_params as params
@@ -46,8 +42,6 @@ date = param.DATE_NAME
 yr_qtr = param.YR_QTR_NAME
 year = param.ANNUAL_DATE
 
-
-#######################  MAIN Function  ###############################
 
 def update():
     ''' Check Input files from S&P and Fred for new data
@@ -176,7 +170,7 @@ def update():
               .sort(by= yr_qtr)
 
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## +++++  fetch historical industry data  ++++++++++++++++++++++++++++++++++++
+## +++++  fetch & update historical industry data  +++++++++++++++++++++++++++
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     # read stored data
@@ -220,8 +214,8 @@ def update():
                             how= 'vertical')
     
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++              
-## +++++ fetch projections & archive all proj input files  +++++++++++++++++
-## +++ proj_dict: yr_qtr keys & df of proj as values +++++++++++++++++++++++
+## +++++++++++++++++ fetch projections  ++++++++++++++++++++++++++++++++++++
+## ++++++++++++ proj_dict: {yr_qtr: df of proj}  +++++++++++++++++++++++++++
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     # fetch history
@@ -260,7 +254,7 @@ def update():
     ])
     
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## +++++ write results  ++++++++++++++++++++++++++++++++++++++++++++++++++++
+## +++++ write results & archive s&pinput files  +++++++++++++++++++++++++++
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     write.history(actual_df)

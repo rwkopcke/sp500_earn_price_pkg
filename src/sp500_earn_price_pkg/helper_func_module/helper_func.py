@@ -175,4 +175,3 @@ def my_df_print(df, n_rows=30):
     ):
         print(df)
     return
-    
