@@ -25,17 +25,16 @@
 '''
 import polars as pl
 import polars.selectors as cs
-#from openpyxl import load_workbook
 
-from sp500_earn_price_pkg.main_script_module.update_data_seqments \
-    import update_record
+from sp500_earn_price_pkg.principal_scripts.code_segments\
+    .update_data import update_record
 
 from sp500_earn_price_pkg.helper_func_module \
     import helper_func as hp
-from sp500_earn_price_pkg.main_script_module.update_data_seqments \
-    import read_data as read
-from sp500_earn_price_pkg.main_script_module.update_data_seqments \
-    import write_data_to_files as write
+from sp500_earn_price_pkg.principal_scripts.code_segments\
+    .update_data import read_data as read
+from sp500_earn_price_pkg.principal_scripts.code_segments\
+    .update_data import write_data_to_files as write
 
 import sp500_earn_price_pkg.config.config_paths as config
 import sp500_earn_price_pkg.config.set_params as params

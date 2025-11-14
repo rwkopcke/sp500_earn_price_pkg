@@ -38,12 +38,40 @@
 - https://www.spglobal.com/spdji/en/search/?query=index+earnings&activeTab=all
 - https://fred.stlouisfed.org/series/DFII10/chart
 
+### pyproject.toml
+```
+[project]
+name = "sp500-earn-price-pkg"
+version = "2.0.0"
+description = "Compare S&P 500's earn-price ratio to 10-yr TIPS rate"
+readme = "README.md"
+authors = [
+    { name = "RW Kopcke", email = "rwkopckel@yahoo.com" }
+]
+requires-python = ">=3.12.4"
+dependencies = [
+    "matplotlib>=3.10.3",
+    "openpyxl>=3.1.5",
+    "polars>=1.31.0",
+    "pyarrow>=21.0.0",
+    "scipy>=1.16.1",
+    "seaborn>=0.13.2",
+]
+
+[project.scripts]
+earn-price = "sp500_earn_price_pkg.entry:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+```
+
 ### project file structure
 
 #### Dependencies:
 ```     
 ... /sp500_earn_price_pkg % uv tree
-sp500-earn-price-pkg v1.0.0
+sp500-earn-price-pkg v2.0.0
 ├── matplotlib v3.10.6
 │   ├── contourpy v1.3.3
 │   │   └── numpy v2.3.3
@@ -97,9 +125,7 @@ sp500-earn-price-pkg v1.0.0
 │   │   ├── eps_page5.pdf
 │   │   └── eps_page6.pdf
 │   ├── input_dir
-│   │   ├── ~$DFII10.xlsx
 │   │   ├── DFII10.xlsx
-│   │   ├── sp-500-eps-est 2025 11 12.xlsx
 │   │   └── sp-eps 2025-11-05.xlsx
 │   ├── output_dir
 │   │   ├── sp500_ind_df.parquet
@@ -118,26 +144,29 @@ sp500-earn-price-pkg v1.0.0
 │       ├── helper_func_module
 │       │   ├── __init__.py
 │       │   ├── display_helper_func.py
-│       │   ├── display_ind_data_read_df.py
-│       │   ├── display_read_proj_dict.py
-│       │   ├── display_read_record_dict.py
-│       │   ├── helper_func.py
-│       │   └── plot_ind_func.py
-│       └── main_script_module
+│       │   └── helper_func.py
+│       └── principal_scripts
 │           ├── __init__.py
-│           ├── display_data_segments
+│           ├── code_segments
 │           │   ├── __init__.py
-│           │   ├── plot_func.py
-│           │   └── read_data_for_display.py
+│           │   ├── display_data
+│           │   │   ├── __init__.py
+│           │   │   ├── plot_func.py
+│           │   │   └── read_data_for_display.py
+│           │   ├── display_ind
+│           │   │   ├── __init__.py
+│           │   │   ├── plot_ind_func.py
+│           │   │   └── read_ind_for_display.py
+│           │   └── update_data
+│           │       ├── __init__.py
+│           │       ├── read_data.py
+│           │       ├── update_record.py
+│           │       └── write_data_to_files.py
 │           ├── display_data.py
 │           ├── display_ind_data.py
-│           ├── update_data_seqments
-│           │   ├── __init__.py
-│           │   ├── read_data.py
-│           │   ├── update_record.py
-│           │   └── write_data_to_files.py
 │           └── update_data.py
 └── uv.lock
+
 ```
 <br>
 <br>

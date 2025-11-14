@@ -6,16 +6,14 @@
    paths.py script
 '''
 
-import gc
-
 import polars as pl
 import matplotlib.pyplot as plt
 
-from sp500_earn_price_pkg.main_script_module.display_data_segments \
+from sp500_earn_price_pkg.principal_scripts.code_segments.display_data \
     import read_data_for_display as read
-
-from sp500_earn_price_pkg.main_script_module.display_data_segments \
+from sp500_earn_price_pkg.principal_scripts.code_segments.display_data \
     import plot_func as pf
+    
 from sp500_earn_price_pkg.helper_func_module \
     import display_helper_func as dh
 from sp500_earn_price_pkg.helper_func_module \
@@ -117,9 +115,6 @@ def display():
     ])
     fig.savefig(str(env.DISPLAY_0_ADDR))
     
-    del df
-    gc.collect()
-    
 # page one  ======================
 # shows:  historical 12m trailing pe plus
 #    forward 12m trailing pe, using current p
@@ -193,9 +188,6 @@ def display():
         f'{env.DISPLAY_1_ADDR}'
     ])
     fig.savefig(str(env.DISPLAY_1_ADDR))
-    
-    del df
-    gc.collect()
     
 # page two  ======================
 # shows:  historical data for margins and 
@@ -280,9 +272,6 @@ def display():
     fig.savefig(str(env.DISPLAY_2_ADDR))
     #plt.savefig(f'{output_dir}/eps_page2.pdf', bbox_inches='tight')
     
-    del df
-    gc.collect()
-    
 # page three  ======================
 # shows:  components of the equity premium,
 # using 12m forward projected earnings
@@ -349,8 +338,5 @@ def display():
     ])
     fig.savefig(str(env.DISPLAY_3_ADDR))
     #plt.savefig(f'{output_dir}/eps_page3.pdf', bbox_inches='tight')
-    
-    del df
-    gc.collect()
     
     return

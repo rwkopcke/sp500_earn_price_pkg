@@ -5,13 +5,11 @@ def main():
     '''
     
     # import main scripts
-    from sp500_earn_price_pkg.main_script_module import (
+    from sp500_earn_price_pkg.principal_scripts import (
         update_data, 
         display_data,
         display_ind_data
     )
-    
-    import sp500_earn_price_pkg as sp
 
     action_dict = {
         "0": 'Update data from recent S&P and FRED workbooks',
