@@ -13,7 +13,7 @@ class Update_param:
 # date of wkbk
     WKBK_DATE_COL = 'A'
     # max rows to read to find the date of a worksheet
-    MAX_DATE_ROWS = 5
+    MAX_DATE_ROWS = 15
     
 # name of sheet with history and proj data
     SHT_EST_NAME = 'ESTIMATES&PEs'
@@ -30,11 +30,30 @@ class Update_param:
     PROJ_PREFIX_OUTPUT_FILE = 'sp-500-eps-est'
     EXT_OUTPUT_FILE_NAME = '.parquet'
     
-    # 'date' is str (DATE_FMT_SP_FILE); the rest are Float32
-    HIST_COLUMN_NAMES = [DATE_NAME, PRICE_NAME, 'op_eps', 'rep_eps',
-                'op_p/e', 'rep_p/e', '12m_op_eps', '12m_rep_eps']
-    PROJ_COLUMN_NAMES = [DATE_NAME, 'op_eps', 'rep_eps',
-                        'op_p/e', 'rep_p/e', '12m_op_eps', '12m_rep_eps']
+    # names of cols for SP aggregates series
+    OP_E = 'op_eps'
+    OP_V = 'op_pe'
+    REP_E = 'rep_eps'
+    REP_V = 'rep_pe'
+    
+    # suffix for names of cols for IND series
+    OP_EPS = '_' + OP_E
+    OP_PE = '_' + OP_V
+    REP_EPS = '_' + REP_E
+    REP_PE = '_' + REP_V
+    
+    # DATE_NAME is str (DATE_FMT_SP_FILE); the rest are Float32
+    # names for cols for history and projections for sp agg series
+    HIST_COLUMN_NAMES = [DATE_NAME, PRICE_NAME, OP_E, REP_E,
+                OP_V, REP_V, '12m' + OP_EPS, '12m' + REP_EPS]
+    PROJ_COLUMN_NAMES = [DATE_NAME, OP_E, REP_E,
+                        OP_V, REP_V, '12m' + OP_EPS, '12m' + REP_EPS]
+    
+    # ['date', 'price', 'yr_qtr', 'op_eps', 'rep_eps', 'op_p/e', 'rep_p/e', '12m_op_eps', 
+    # '12m_rep_eps', 'real_int_rate', 'op_margin', 'div_ps', 'sales_ps', 
+    # 'bk_val_ps', 'capex_ps', 'divisor']
+    #[ 'date', 'price', 'op_eps', 'rep_eps', 'op_pe', 'rep_pe', '12m_op_eps', '12m_rep_eps', 
+    # 'yr_qtr', 'op_margin', 'div_ps', 'sales_ps', 'bk_val_ps', 'capex_ps', 'divisor', 'real_int_rate']
     
 # keys for history eps and price
     HISTORY_KEYS = ['ACTUALS', 'Actuals']
@@ -55,8 +74,9 @@ class Update_param:
 # data for margins
     MARG_KEYS = ['QTR']
     MARG_KEY_COL= 'A'
+    MARG_KEY_POS= 0
     MARG_MAX_ROW_OFFSET= 4
-    MARG_STOP_COL_KEY= None
+    MARG_STOP_COL_KEY= 'None'
 
 # data from sp quarterly wksht
     SHT_QTR_NAME = "QUARTERLY DATA"
@@ -74,6 +94,8 @@ class Update_param:
     RR_START_COL = 'A'
     RR_STOP_COL = 'B'
     RR_DF_SCHEMA = [DATE_NAME, RR_NAME]
+    # should be less than yr_qtr than any data from FRED
+    RR_MIN_YR_QTR = '2000-Q1'
 
 # data from sp industry wksht
     SHT_IND_NAME = 'SECTOR EPS'
@@ -92,34 +114,13 @@ class Update_param:
     IND_DATA_LAST_COL_KEY = None
     IND_DATA_START_COL = 'D'
     IND_DATA_START_COL_OFFSET = 3
-
-    OP_EPS = '_op_eps'
-    OP_PE = '_op_pe'
-    REP_EPS = '_rep_eps'
-    REP_PE = '_rep_pe'
-    
     
 
-    
-
-    SHT_EST_PROJ_DATE_PARAMS = {
-        'date_keys' :  PRICE_KEYS,
-        'value_col_1' : 'D', 
-        'date_key_2' : None, 
-        'value_col_2' : None,
-        'column_names' : None,
-        'yr_qtr_name' : YR_QTR_NAME
-    }
-
-    SHT_EST_PROJ_PARAMS = {
-        'act_key' : ESTIMATES_KEYS,
-        'end_key' : HISTORY_KEYS,
-        'first_col' : 'A',
-        'last_col' : 'J',
-        'skip_cols' : [1, 4, 7],
-        'column_names' : PROJ_COLUMN_NAMES,
-        'yr_qtr_name' : YR_QTR_NAME
-    }
+# data from sp estimates sheet
+    PROJ_MAX_LIST = 140
+    PROJ_ROW_START_KEYS = ESTIMATES_KEYS
+    PROJ_ROW_STOP_KEYS = None
+    PROJ_COLS_TO_SKIP = [1, 4, 7]
     
 
 @dataclass(frozen= True, slots= True)
@@ -153,7 +154,7 @@ class Display_param:
     ROGQ = (1. + ROG) ** (1/4)
 
     HIST_COL_NAMES = ['date', 'yr_qtr', 'price', 'op_eps', 'rep_eps',
-                    'op_p/e', 'rep_p/e', '12m_op_eps', '12m_rep_eps',
+                    'op_pe', 'rep_pe', '12m_op_eps', '12m_rep_eps',
                     'op_margin', 'real_int_rate']
 
     DATA_COLS_RENAME  = {'op_margin': 'margin',

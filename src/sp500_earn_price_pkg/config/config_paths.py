@@ -26,7 +26,8 @@ class Fixed_locations:
         {'sources': {'s&p': '',             
                      'tips': ''},
         'latest_file': '',
-        'prev_used_files': []}   # [str]
+        'prev_used_files': [],    # [str]
+        'other_prev_files': []}   # [str]
 
     # partial templates for file names
     FILE_INPUT_WKBK_PREFIX = 'sp-'
@@ -46,12 +47,12 @@ class Fixed_locations:
     INPUT_OUTPUT_DIR = BASE_DIR / "input_output"
     
     INPUT_DIR = INPUT_OUTPUT_DIR / "input_dir"
+    # INPUT_DIR = ARCHIVE_DIR
     # to reinitialize all data in the project, using all archived history:
     #    put # before the statement for INPUT_DIR immed. above
-    #    remove # before INPUT_DIR = ARCHIVE_DIR below
+    #    remove # before INPUT_DIR = ARCHIVE_DIR
     #    make sure 'DFII10.xlsx' is in ARCHIVE_DIR
     #    reverse these steps to return to normal operation
-    # INPUT_DIR = ARCHIVE_DIR
     
     # ensure this file is in INPUT_DIR (see above)
     INPUT_RR_FILE = 'DFII10.xlsx'
@@ -76,15 +77,19 @@ class Fixed_locations:
     
     BACKUP_HIST_FILE = "backup_pe_df_actuals.parquet"
     BACKUP_HIST_ADDR = BACKUP_DIR / BACKUP_HIST_FILE
+    BACKUP_HIST_TEMP_ADDR = BACKUP_DIR / "temp_actuals.parquet"
     
     BACKUP_IND_FILE  = "backup_ind_df.parquet"
     BACKUP_IND_ADDR  = BACKUP_DIR / BACKUP_IND_FILE
+    BACKUP_IND_TEMP_ADDR = BACKUP_DIR / "temp_ind.parquet"
     
     BACKUP_PROJ_FILE  = "backup_pe_estimates_df.parquet"
     BACKUP_PROJ_ADDR  = BACKUP_DIR / BACKUP_PROJ_FILE
+    BACKUP_PROJ_TEMP_ADDR = BACKUP_DIR / "temp_proj.parquet"
     
     BACKUP_RECORD_DICT = "backup_record_dict.json"
     BACKUP_RECORD_DICT_ADDR = BACKUP_DIR / BACKUP_RECORD_DICT
+    BACKUP_RECORD_TEMP_ADDR = BACKUP_DIR /  "temp_record.json"
 
     DISPLAY_DIR = INPUT_OUTPUT_DIR / "display_dir"
     DISPLAY_0 = 'eps_page0.pdf'

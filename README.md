@@ -1,11 +1,11 @@
 # S&P500 earnings yield and 10-year TIPS rate
 #### initiated:  2023 08
-#### current version:  2025 08
+#### current version:  2025 12
 ### Uses current and historical data
 - index of stock prices for the S&P500
 - operating and reported earnings for the S&P500
 - projections of operating and reported earnings
-- interest rate on 10-year TIPS
+- interest rate on 10-year TIPS (constant maturity)
 - operating margins for the S&P500
 - earnings and prices for the S&P's industries
 
@@ -44,29 +44,29 @@
 ```     
 ... /sp500_earn_price_pkg % uv tree
 sp500-earn-price-pkg v1.0.0
-├── matplotlib v3.10.3
+├── matplotlib v3.10.6
 │   ├── contourpy v1.3.3
-│   │   └── numpy v2.3.2
+│   │   └── numpy v2.3.3
 │   ├── cycler v0.12.1
-│   ├── fonttools v4.59.0
-│   ├── kiwisolver v1.4.8
-│   ├── numpy v2.3.2
+│   ├── fonttools v4.60.0
+│   ├── kiwisolver v1.4.9
+│   ├── numpy v2.3.3
 │   ├── packaging v25.0
 │   ├── pillow v11.3.0
-│   ├── pyparsing v3.2.3
+│   ├── pyparsing v3.2.4
 │   └── python-dateutil v2.9.0.post0
 │       └── six v1.17.0
 ├── openpyxl v3.1.5
 │   └── et-xmlfile v2.0.0
-├── polars v1.31.0
+├── polars v1.33.1
 ├── pyarrow v21.0.0
-├── scipy v1.16.1
-│   └── numpy v2.3.2
+├── scipy v1.16.2
+│   └── numpy v2.3.3
 └── seaborn v0.13.2
-    ├── matplotlib v3.10.3 (*)
-    ├── numpy v2.3.2
-    └── pandas v2.3.1
-        ├── numpy v2.3.2
+    ├── matplotlib v3.10.6 (*)
+    ├── numpy v2.3.3
+    └── pandas v2.3.2
+        ├── numpy v2.3.3
         ├── python-dateutil v2.9.0.post0 (*)
         ├── pytz v2025.2
         └── tzdata v2025.2
@@ -97,13 +97,17 @@ sp500-earn-price-pkg v1.0.0
 │   │   ├── eps_page5.pdf
 │   │   └── eps_page6.pdf
 │   ├── input_dir
+│   │   ├── ~$DFII10.xlsx
 │   │   ├── DFII10.xlsx
-│   │   └── sp-500-eps-est YYYY MM DD.xlsx
+│   │   ├── sp-500-eps-est 2025 11 12.xlsx
+│   │   └── sp-eps 2025-11-05.xlsx
 │   ├── output_dir
 │   │   ├── sp500_ind_df.parquet
 │   │   ├── sp500_pe_df_actuals.parquet
 │   │   └── sp500_pe_df_estimates.parquet
 │   └── record_dict.json
+├── pyproject.toml
+├── README.md
 ├── src
 │   └── sp500_earn_price_pkg
 │       ├── __init__.py
@@ -115,33 +119,31 @@ sp500-earn-price-pkg v1.0.0
 │       │   ├── __init__.py
 │       │   ├── display_helper_func.py
 │       │   ├── display_ind_data_read_df.py
-│       │   ├── display_read_history.py
 │       │   ├── display_read_proj_dict.py
 │       │   ├── display_read_record_dict.py
 │       │   ├── helper_func.py
-│       │   ├── plot_func.py
-│       │   ├── plot_ind_func.py
-│       │   ├── read_data_func.py
-│       │   ├── update_proj_hist_files.py
-│       │   ├── update_record.py
-│       │   ├── update_write_history_and_industry_files.py
-│       │   ├── update_write_proj_file.py
-│       │   ├── update_write_proj_files.py
-│       │   └── update_write_record.py
+│       │   └── plot_ind_func.py
 │       └── main_script_module
 │           ├── __init__.py
+│           ├── display_data_segments
+│           │   ├── __init__.py
+│           │   ├── plot_func.py
+│           │   └── read_data_for_display.py
 │           ├── display_data.py
 │           ├── display_ind_data.py
+│           ├── update_data_seqments
+│           │   ├── __init__.py
+│           │   ├── read_data.py
+│           │   ├── update_record.py
+│           │   └── write_data_to_files.py
 │           └── update_data.py
-├── pyproject.toml
-├── README.md
 └── uv.lock
 ```
 <br>
 <br>
 
 ## Instructions
-0. Set ARCHIVE_DIR in src/sp500_earn_price_pkg/config/config_paths.py
+0. Set ARCHIVE_DIR
 
 1. Put new .xlsx from S&P into input_dir/    (S&P's id: EPSEST)
     - https://www.spglobal.com/spdji/en/search/?query=index+earnings&activeTab=all

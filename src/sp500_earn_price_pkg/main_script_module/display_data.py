@@ -11,20 +11,21 @@ import gc
 import polars as pl
 import matplotlib.pyplot as plt
 
-from sp500_earn_price_pkg.helper_func_module import (
-     display_read_record_dict,
-     display_read_history,
-     display_read_proj_dict
-)
+from sp500_earn_price_pkg.main_script_module.display_data_segments \
+    import read_data_for_display as read
 
-from sp500_earn_price_pkg.helper_func_module \
+from sp500_earn_price_pkg.main_script_module.display_data_segments \
     import plot_func as pf
 from sp500_earn_price_pkg.helper_func_module \
     import display_helper_func as dh
+from sp500_earn_price_pkg.helper_func_module \
+    import helper_func as hp
     
 import sp500_earn_price_pkg.config.config_paths as config
-import sp500_earn_price_pkg.config.set_params as param
-# param.Display_param()
+import sp500_earn_price_pkg.config.set_params as params
+
+env = config.Fixed_locations()
+param = params.Display_param()
 
 
 # ================  MAIN =============================================+
@@ -43,13 +44,11 @@ def display():
 ## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     
     record_dict, date_this_projn, yr_qtr_current_projn = \
-        display_read_record_dict.read()
+        read.record()
     
-    data_df, yr_qtr_set = \
-        display_read_history.read(record_dict)
+    data_df = read.history(record_dict)
     
-    proj_dict, proj_dict_keys_set = \
-        display_read_proj_dict.read(record_dict, yr_qtr_set)
+    proj_dict, proj_dict_keys_set = read.projection()
         
 ## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## +++++++++ Display the data +++++++++++++++++++++++++++++++++++++++++
@@ -75,10 +74,10 @@ def display():
     ax = fig.subplot_mosaic([['operating'],
                              ['reported']])
     fig.suptitle(
-        f'{param.Display_param().PAGE0_SUPTITLE}\n{date_this_projn}',
+        f'{param.PAGE0_SUPTITLE}\n{date_this_projn}',
         fontsize=13,
         fontweight='bold')
-    fig.supxlabel(param.Display_param().PAGE0_SOURCE, fontsize= 8)
+    fig.supxlabel(param.PAGE0_SOURCE, fontsize= 8)
 
     # subsets of columns for op eps (top panel)
     # use rows that match keys for proj_dict
@@ -113,10 +112,10 @@ def display():
                 ylabl= ylabl)
     
     # show the figure
-    print('\n============================')
-    print(config.Fixed_locations().DISPLAY_0_ADDR)
-    print('============================\n')
-    fig.savefig(str(config.Fixed_locations().DISPLAY_0_ADDR))
+    hp.message([
+        f'{env.DISPLAY_0_ADDR}'
+    ])
+    fig.savefig(str(env.DISPLAY_0_ADDR))
     
     del df
     gc.collect()
@@ -132,10 +131,10 @@ def display():
     ax = fig.subplot_mosaic([['operating'],
                              ['reported']])
     fig.suptitle(
-        f'{param.Display_param().PAGE1_SUPTITLE}\n{date_this_projn}\n ',
+        f'{param.PAGE1_SUPTITLE}\n{date_this_projn}\n ',
         fontsize=13,
         fontweight='bold')
-    fig.supxlabel(param.Display_param().PAGE1_SOURCE, fontsize= 8)
+    fig.supxlabel(param.PAGE1_SOURCE, fontsize= 8)
     
     # create the top and bottom graphs for op and rep pe
     # new DF with cols for p/e and alt p/e, both using 12m trailing E
@@ -152,11 +151,11 @@ def display():
     p_df = proj_dict[yr_qtr_current_projn]\
                 .select(['yr_qtr', '12m_op_eps'])
     
-    df = dh.page1_df(df, p_df, '12m_op_eps', param.Display_param().ROGQ )
+    df = dh.page1_df(df, p_df, '12m_op_eps', param.ROGQ )
     
     denom = 'divided by projected earnings'
     legend1 = f'price (constant after {date_this_projn})\n{denom}'
-    legend2 = f'price (increases {param.Display_param().ROG_AR}% ar after {date_this_projn})\n{denom}'
+    legend2 = f'price (increases {param.ROG_AR}% ar after {date_this_projn})\n{denom}'
     
     df = df.rename({'pe': 'historical',
                'fix_proj_p/e': legend1,
@@ -176,7 +175,7 @@ def display():
     p_df = proj_dict[yr_qtr_current_projn]\
                .select(['yr_qtr', '12m_rep_eps'])
     
-    df = dh.page1_df(df, p_df, '12m_rep_eps', param.Display_param().ROGQ )
+    df = dh.page1_df(df, p_df, '12m_rep_eps', param.ROGQ )
     
     df = df.rename({'pe': 'historical',
                     'fix_proj_p/e': legend1,
@@ -190,10 +189,10 @@ def display():
                     ylabl= ' \n',
                     xlabl= ' \n')
     
-    print('\n============================')
-    print(config.Fixed_locations().DISPLAY_1_ADDR)
-    print('============================\n')
-    fig.savefig(str(config.Fixed_locations().DISPLAY_1_ADDR))
+    hp.message([
+        f'{env.DISPLAY_1_ADDR}'
+    ])
+    fig.savefig(str(env.DISPLAY_1_ADDR))
     
     del df
     gc.collect()
@@ -210,10 +209,10 @@ def display():
                              ['quality'],
                              ['premium']])
     fig.suptitle(
-        f'{param.Display_param().PAGE2_SUPTITLE}\n{date_this_projn}\n',
+        f'{param.PAGE2_SUPTITLE}\n{date_this_projn}\n',
         fontsize=13,
         fontweight='bold')
-    fig.supxlabel(param.Display_param().PAGE2_SOURCE, fontsize= 8)
+    fig.supxlabel(param.PAGE2_SOURCE, fontsize= 8)
     
     # create the top and bottom graphs for margins and premiums
     # create working df for op margins (top panel)
@@ -275,10 +274,10 @@ def display():
                     xlabl= ' \n ',
                     hrzntl_vals= [2.0, 4.0])
     
-    print('\n============================')
-    print(config.Fixed_locations().DISPLAY_2_ADDR)
-    print('============================\n')
-    fig.savefig(str(config.Fixed_locations().DISPLAY_2_ADDR))
+    hp.message([
+        f'{env.DISPLAY_2_ADDR}'
+    ])
+    fig.savefig(str(env.DISPLAY_2_ADDR))
     #plt.savefig(f'{output_dir}/eps_page2.pdf', bbox_inches='tight')
     
     del df
@@ -295,10 +294,10 @@ def display():
     ax = fig.subplot_mosaic([['operating'],
                              ['reported']])
     fig.suptitle(
-        f'{param.Display_param().PAGE3_SUPTITLE}\n{date_this_projn}\n',
+        f'{param.PAGE3_SUPTITLE}\n{date_this_projn}\n',
         fontsize=13,
         fontweight='bold')
-    fig.supxlabel(param.Display_param().PAGE3_SOURCE, fontsize= 8)
+    fig.supxlabel(param.PAGE3_SOURCE, fontsize= 8)
     
     xlabl = '\nquarter of projection, price, and TIPS rate\n\n'
     ylabl = ' \npercent\n '
@@ -345,10 +344,10 @@ def display():
                 xlabl= xlabl,
                 hrzntl_vals= [2.0, 4.0])
     
-    print('\n============================')
-    print(config.Fixed_locations().DISPLAY_3_ADDR)
-    print('============================\n')
-    fig.savefig(str(config.Fixed_locations().DISPLAY_3_ADDR))
+    hp.message([
+        f'{env.DISPLAY_3_ADDR}'
+    ])
+    fig.savefig(str(env.DISPLAY_3_ADDR))
     #plt.savefig(f'{output_dir}/eps_page3.pdf', bbox_inches='tight')
     
     del df

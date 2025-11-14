@@ -1,31 +1,24 @@
-
-#=================  Global Parameters  ================================
-import gc
-
 import polars as pl
 import polars.selectors as cs
 import matplotlib.pyplot as plt
 import seaborn as sn
 import numpy as np
 
+from sp500_earn_price_pkg.main_script_module.display_ind_segments \
+    import read_ind_for_display
 from sp500_earn_price_pkg.helper_func_module \
-    import display_ind_data_read_df
+    import helper_func as hp
     
 import sp500_earn_price_pkg.config.config_paths as config
-import sp500_earn_price_pkg.config.set_params as param
-# param.Display_ind_param()
+import sp500_earn_price_pkg.config.set_params as params
 
-# ================  MAIN ==============================================
+env = config.Fixed_locations()
+param = params.Display_ind_param()
+
 
 def display_ind():
-    
-    
-## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## ++++++ Read Industry data ++++++++++++++++++++++++++++++++++++++++++
-## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
     ind_df, op_e_df, year, DATE_THIS_PROJECTION = \
-        display_ind_data_read_df.read()
+        read_ind_for_display.read()
     
     '''
 # SCATTER PLOTS ++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -88,10 +81,10 @@ def display_ind():
     # plt.tight_layout(pad= 0.5)
     
     fig.suptitle(
-        '\n' + param.Display_ind_param().PAGE4_SUPTITLE,
+        '\n' + param.PAGE4_SUPTITLE,
         fontsize=13,
         fontweight='bold')
-    fig.supxlabel(f'{param.Display_ind_param().PAGE4_SOURCE}\n ', fontsize= 8)
+    fig.supxlabel(f'{param.PAGE4_SOURCE}\n ', fontsize= 8)
     
     ax = fig.subplots()
     
@@ -111,7 +104,7 @@ def display_ind():
 )
     plt.xticks(rotation = 30)
     ax.set_ylim(ymin= -50, ymax= 60)
-    ax.set_xlabel(param.Display_ind_param().XLABL, fontweight= 'bold')
+    ax.set_xlabel(param.XLABL, fontweight= 'bold')
     ax.set_ylabel(' \nprice-earnings ratio', fontweight= 'bold')
     sn.move_legend(ax, 'lower left')
     box = ax.get_position()
@@ -121,15 +114,10 @@ def display_ind():
               reverse= True)
     # sn.move_legend(ax, 'upper left', bbox_to_anchor= (1, 1))
     
-    print('\n============================')
-    print(config.Fixed_locations().DISPLAY_4_ADDR)
-    print('============================\n')
-    fig.savefig(str(config.Fixed_locations().DISPLAY_4_ADDR))
-    
-    del fig
-    del df
-    del ax
-    gc.collect()
+    hp.message([
+        env.DISPLAY_4_ADDR
+    ])
+    fig.savefig(str(env.DISPLAY_4_ADDR))
     
 # P/E CORRELATION HEAT MAP ++++++++++++++++++++++++++++++++++++++++++++
 # https://seaborn.pydata.org/generated/seaborn.heatmap.html
@@ -166,7 +154,7 @@ def display_ind():
     cg.figure.subplots_adjust(top=0.87)
     
     cg.figure.suptitle(
-        f' \n{param.Display_ind_param().PAGE5_SUPTITLE}',
+        f' \n{param.PAGE5_SUPTITLE}',
         fontsize=13,
         fontweight='bold')
     # plt.tight_layout(pad= 0.5)
@@ -212,15 +200,10 @@ def display_ind():
     new_values = np.ma.array(values, mask=mask)
     cg.ax_heatmap.collections[0].set_array(new_values)
     '''
-    
-    print('\n============================')
-    print(config.Fixed_locations().DISPLAY_5_ADDR)
-    print('============================\n')
-    cg.savefig(str(config.Fixed_locations().DISPLAY_5_ADDR))
-    
-    del op_e_cor_df
-    del cg
-    gc.collect()
+    hp.message([
+        env.DISPLAY_5_ADDR
+    ])
+    cg.savefig(str(env.DISPLAY_5_ADDR))
     
 # DISTRIBUTION of E using Matplotlib and Numpy ++++++++++++++++++++++++
 # https://seaborn.pydata.org/examples/structured_heatmap.html
@@ -241,10 +224,10 @@ def display_ind():
     # one plot
     ax = fig.subplots()
     fig.suptitle(
-        '\n' + param.Display_ind_param().PAGE6_SUPTITLE,
+        '\n' + param.PAGE6_SUPTITLE,
         fontsize= 13,
         fontweight= 'bold')
-    fig.supxlabel(param.Display_ind_param().PAGE4_SOURCE, fontsize= 8)
+    fig.supxlabel(param.PAGE4_SOURCE, fontsize= 8)
     
     
     # remove pe data, simplify column names
@@ -294,10 +277,10 @@ def display_ind():
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5),
               reverse= True)
     
-    print('\n============================')
-    print(config.Fixed_locations().DISPLAY_6_ADDR)
-    print('============================\n')
-    fig.savefig(str(config.Fixed_locations().DISPLAY_6_ADDR))
+    hp.message([
+        env.DISPLAY_6_ADDR
+    ])
+    fig.savefig(str(env.DISPLAY_6_ADDR))
 
     return
     

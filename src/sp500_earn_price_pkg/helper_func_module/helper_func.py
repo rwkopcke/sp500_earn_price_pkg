@@ -48,7 +48,7 @@ def cast_date_to_str(val):
     return val
         
 
-def str_to_date(val, date_fmt, proj_date_fmt):
+def str_to_date(val, date_fmt_wkbk, date_fmt):
     '''
         Receive datetime and date_format str
         If val is str that can be cast to a date
@@ -60,8 +60,8 @@ def str_to_date(val, date_fmt, proj_date_fmt):
     '''
     val_ = val.split(" ")[0]
     try:
-        date_ = datetime.strptime(val_, date_fmt)
-        return datetime.strftime(date_, proj_date_fmt)
+        date_ = datetime.strptime(val_, date_fmt_wkbk)
+        return datetime.strftime(date_, date_fmt)
     except Exception as e:
         return val
     

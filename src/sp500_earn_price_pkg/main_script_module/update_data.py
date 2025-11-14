@@ -23,33 +23,29 @@
    The addresses of documents for this project appear in this program's 
    project directory: S&P500_PE/sp500_pe/config_paths.py
 '''
-
-#######################  Parameters  ###################################
-import gc
-
 import polars as pl
 import polars.selectors as cs
-from openpyxl import load_workbook
+#from openpyxl import load_workbook
 
 from sp500_earn_price_pkg.main_script_module.update_data_seqments \
-    import (
-        update_record,
-        update_write_history_and_industry_files,
-        update_proj_hist_files,
-        update_write_proj_files,
-        update_write_record,
-)
+    import update_record
 
 from sp500_earn_price_pkg.helper_func_module \
     import helper_func as hp
-from sp500_earn_price_pkg.helper_func_module \
-    import read_data_func as rd
+from sp500_earn_price_pkg.main_script_module.update_data_seqments \
+    import read_data as read
+from sp500_earn_price_pkg.main_script_module.update_data_seqments \
+    import write_data_to_files as write
 
 import sp500_earn_price_pkg.config.config_paths as config
 import sp500_earn_price_pkg.config.set_params as params
 
 env = config.Fixed_locations()
 param = params.Update_param()
+
+date = param.DATE_NAME
+yr_qtr = param.YR_QTR_NAME
+year = param.ANNUAL_DATE
 
 
 #######################  MAIN Function  ###############################
@@ -72,7 +68,7 @@ def update():
 ## +++++   format of std name: sp-500-eps DATE_FMT_SP_FILE    +++++++++++++
 ## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    sp_input_files_set = rd.verify_valid_input_files()
+    sp_input_files_set = read.verify_valid_input_files()
     
     if not sp_input_files_set:
         hp.message([
@@ -82,46 +78,18 @@ def update():
     
     # not sorted
     sp_input_files_set = \
-        rd.ensure_consistent_file_names(sp_input_files_set)
+        read.ensure_consistent_file_names(sp_input_files_set)
         
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++              
 ## +++++  update record_dict for new files  ++++++++++++++++++++++++++++++++
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-# A. retrieve, uses, and save all dates as datetime.date() objects
-
-# 1. load record dict <replace full history of files read with full history of yr_qtr>
-# 2. check Input sp files for new data
-# 3. load history, returning actual df [read_parquet]
-# 4. set rows to update [new rows: set of all dates less set not to update]
-# 5. add_df: e data in rows to update
-# 6. load margins for rows to update [read_xl]
-# 7. add to add_df
-# 8. load qtrly data for rows to update [read_xl]
-# 9. add to add_df
-#10. load rr data for dates in rows to update [read_xl]
-#11. add to add_df
-#12. concate history rows not to update with add_df
-#13. write new history to parquet [write_parquet]
-#    update record dict
-#       latest dt.date for xlsx used
-#       latest yr_qtr for xlsx used
-#       latest yr_qtr with actual op_eps data
-#+++++++++++++++++++++++++++++++++++++++++++++++++++
-#14. load historical ind data, returning actual df [read_parquet]
-#15. set rows to update
-#16. add_df: ind data for rows to update [read_xls]
-#17. concat
-#18. write [write_parquet]
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++
-#19. create message function in hp.message(*args: list of strings
 
     # fetch record_dict - if record_dist is None, create it
     record_dict = update_record.fetch()
          
     # update record_dict for new_files_set and files_to_read_set
     [record_dict, new_files_set, files_to_read_set] = \
-         update_record.update(record_dict, sp_input_files_set)
+         update_record.record_dict(record_dict, sp_input_files_set)
     
     if not files_to_read_set:
         hp.message([
@@ -137,7 +105,7 @@ def update():
     latest_file = record_dict["latest_file"]
     hp.message([
         f'Update historical data from: {latest_file}',
-        f'in directory: \n{config.Fixed_locations().INPUT_DIR}'
+        f'in directory: \n{env.INPUT_DIR}'
     ])
     
 ## EXISTING HISTORICAL DATA from .parquet file (not yet updated)
@@ -145,151 +113,112 @@ def update():
     # contain null in the op_eps col => assumes history is not revised
     # yrqtr_no_update_set: rows NOT to be updated
     
-    actual_df = rd.read_existing_history()
+    actual_df = read.history_data()
+    
+    # find the set of rows to update in actual_df
     if not actual_df.is_empty():
-        dates_to_update_set = \
-            rd.find_qtrs_without_op_earn(actual_df)
+        [dates_to_update_set,
+         min_date_to_update,
+         min_yr_qtr_to_update] = \
+            read.find_qtrs_without_op_earn(actual_df)
     else:
-        dates_to_update_set = None
+        dates_to_update_set = set()
+        min_date_to_update = None
+        min_yr_qtr_to_update = None
     
 ## NEW HISTORICAL DATA from latest sp file
     # activate latest xlsx wkbk and sheet with data for sp
-    [add_df, cell_list] = rd.update_history(
-                                latest_file,
-                                dates_to_update_set)
-    print('upd history')
-    hp.my_df_print(add_df)
+    [add_df, cell_list] = read.history_loader(
+                                    latest_file,
+                                    min_date_to_update)
     
 ## MARGINS add to add_df
-    add_df = add_df.join(rd.margin_loader(
+    add_df = add_df.join(read.margin_loader(
                                   latest_file,
-                                  dates_to_update_set,
+                                  min_date_to_update,
                                   cell_list), 
                          how="left", 
                          on= param.YR_QTR_NAME,
                          coalesce= True)
-    print('upd marg')
-    hp.my_df_print(add_df)
 
 ## QUARTERLY DATA add to add_df
     # ensure all dtypes (if not string or date-like) are float32
     # some dtype are null when all col entries in short df are null
-    add_df = add_df.join(rd.qtrly_loader(latest_file,
-                                         dates_to_update_set),  
+    add_df = add_df.join(read.qtrly_loader(latest_file,
+                                           min_yr_qtr_to_update),  
                     how= "left", 
                     on= [param.YR_QTR_NAME],
                     coalesce= True)
     
-    print('upd qtrly')
-    hp.my_df_print(add_df)
-    
 # REAL INTEREST RATES, eoq, from FRED DFII10
-    add_df = add_df.join(rd.fred_reader(
+    add_df = add_df.join(read.fred_reader(
                                 env.INPUT_RR_FILE,
-                                dates_to_update_set),
+                                min_yr_qtr_to_update),
                          how= 'left',
                          on= param.YR_QTR_NAME,
                          coalesce= True)
     
-    print('upd rr')
-    hp.my_df_print(add_df)
-    
 ## ACTUAL_DF update: remove rows to be updated and concat with add_df
-    # align cols of actual_df with add_df
+    # align cols of actual_df with add_df (casting null cols--
+    #    those that are not pl.String or pl.Float32-- to pl.Float32)
+    #.   some cols in add_df can be entirely null
     # ensure rows do not overlap
     if actual_df.is_empty():
-        actual_df = add_df.sort(by= param.YR_QTR_NAME)
+        actual_df = add_df.sort(by= date)
     else:
         actual_df = \
-            pl.concat([add_df,
+            pl.concat([add_df.cast({
+                            ~cs.by_dtype(pl.Date, pl.String): 
+                            pl.Float32}),
                         actual_df.select(add_df.columns)
-                                .filter(~pl.col(param.DATE_NAME)
-                                .is_in(dates_to_update_set))],
+                                 .filter(~pl.col(date).is_in(
+                                     dates_to_update_set))],
                         how= 'vertical')\
-                      .sort(by= param.YR_QTR_NAME)
-        
-    print('upd actual')
-    hp.my_df_print(actual_df)
-    
-    del add_df
-    gc.collect()
+              .sort(by= yr_qtr)
 
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## +++++  fetch historical industry data  ++++++++++++++++++++++++++++++++++++
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     # read stored data
-    if env.OUTPUT_IND_ADDR.exists():
-        ind_df = pl.read_parquet(env.OUTPUT_IND_ADDR)\
-                   .sort(by= param.ANNUAL_DATE, descending= True)
-                    
-        years_no_update_set = set(pl.Series(ind_df
-                                .drop_nulls(subset='SP500_rep_eps')
-                                .select(pl.col(param.ANNUAL_DATE)))
-                                .to_list())
+    ind_df = read.industry_data()
+    if not ind_df.is_empty():
+        years_no_update_set = \
+            read.find_yrs_without_rep_earn(ind_df)
     else:
         years_no_update_set = set()
         
-    print('ind_df')
-    hp.my_df_print(ind_df)
-    
     # find new industry data
-    add_ind_df = rd.industry_loader(latest_file,
-                                    years_no_update_set)
-    
-    print('upd ind')
-    hp.my_df_print(add_ind_df)
+    add_ind_df = read.industry_loader(latest_file,
+                                      years_no_update_set)
     
     # add col with Q4 value of real_int_rate each year from actual_df
-    rr_schema = [param.YR_QTR_NAME, param.RR_NAME]
     add_ind_df = add_ind_df.join(
-                    actual_df.select(rr_schema)
-                             .filter(pl.col(param.YR_QTR_NAME)
+                    actual_df.select([yr_qtr, param.RR_NAME])
+                             .filter(pl.col(yr_qtr)
                                        .map_elements(lambda x: x[-1:]=='4',
                                                 return_dtype= bool))
-                             .with_columns(pl.col(param.YR_QTR_NAME)
+                             .with_columns(pl.col(yr_qtr)
                                     .map_elements(lambda x: x[0:4],
                                                 return_dtype= str)
-                                    .alias(param.ANNUAL_DATE))
-                             .drop(param.YR_QTR_NAME),
-                    on= param.ANNUAL_DATE,
+                                    .alias(year))
+                             .drop(yr_qtr),
+                    on= year,
                     how= 'left',
                     coalesce= True)\
-            .sort(by= param.ANNUAL_DATE, descending= True)\
+            .sort(by= year, descending= True)\
             .cast({~cs.string() : pl.Float32})
-            
-    print('upd rr')
-    hp.my_df_print(add_ind_df)
     
     if ind_df.is_empty():
-        ind_df = add_ind_df.sort(by= param.ANNUAL_DATE, 
+        ind_df = add_ind_df.sort(by= year, 
                                  descending= True)
     else:
-        years = pl.Series(add_ind_df[param.ANNUAL_DATE]).to_list()
+        years = pl.Series(add_ind_df[year]).to_list()
         ind_df = pl.concat([add_ind_df,
                             ind_df.filter(
-                                ~pl.col(param.ANNUAL_DATE)
+                                ~pl.col(year)
                                    .is_in(years))],
                             how= 'vertical')
-        
-    print('upd ind_df')
-    hp.my_df_print(ind_df)
-    quit()
-        
-## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## +++++ write history, industry files  ++++++++++++++++++++++++++++++++++++
-## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-    actual_df = actual_df.cast({cs.float(): pl.Float32,
-                                cs.integer(): pl.Int16})
-    ind_df = ind_df.cast({cs.float(): pl.Float32,
-                          cs.integer(): pl.Int16})
-
-    update_write_history_and_industry_files.write(actual_df, ind_df)
-    
-    del actual_df
-    del ind_df
-    gc.collect()
     
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++              
 ## +++++ fetch projections & archive all proj input files  +++++++++++++++++
@@ -297,7 +226,7 @@ def update():
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     # fetch history
-    proj_dict = update_proj_hist_files.update()
+    proj_dict = read.projection_data()
     
     # Fetch files_to_read from inputs
     # Update proj_dict with info in files_to_read
@@ -305,44 +234,22 @@ def update():
     # ordinarily a very short set
     failure_to_read_lst = []
     for file in files_to_read_set:
-        # echo file name and address to console
-        active_workbook = \
-            load_workbook(filename=  config.Fixed_locations().INPUT_DIR / file,
-                          read_only= True,
-                          data_only= True)
-        active_sheet = active_workbook[param.Update_param().SHT_EST_NAME]
-        print(f'\n input file: {file}')    
-        
-        # projections of earnings
-        # read date of projection, no prices or other data
-        name_date, _ = \
-            rd.read_sp_date(active_sheet,
-                            **param.Update_param().SHT_EST_PROJ_DATE_PARAMS)
-        name_date = name_date.date()
-        year_quarter = hp.date_to_year_qtr([name_date])[0]
-    
-        # load projections for the name_date
-        proj_date_df = rd.sp_loader(
-            active_sheet,[],**param.Update_param().SHT_EST_PROJ_PARAMS)
+        [proj_date_df, year_quarter] = read.proj_loader(file)
 
         # if any date is None, abort file and continue
-        if (name_date is None or
-            None in proj_date_df['date']):
+        if (None in proj_date_df[param.DATE_NAME]):
             hp.message([
                 'In main(), projections:',
-                f'Skipped sp-500 {name_date} missing projection date'
+                f'Skipped sp-500 {file} missing projection date'
             ])
             failure_to_read_lst.append(file)
             continue
         
         # accumulate proj_date_dfs in proj_dict, 
         # key for each proj_date_df is its year_quarter
+        proj_dict[year_quarter] = proj_date_df
         
-        proj_dict[year_quarter] = proj_date_df.cast(
-                                    {cs.float(): pl.Float32,
-                                     cs.integer(): pl.Int16})
-        
-    # Print housekeeping summary for files_to_read
+    # housekeeping summary for files_to_read
     l = len(files_to_read_set)
     n = len(failure_to_read_lst)
     hp.message([
@@ -352,17 +259,14 @@ def update():
         f'\t{n} files not read:',
         f'\t{failure_to_read_lst}'
     ])
-        
+    
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## +++ write updated proj_dict to parquet file +++++++++++++++++++++++++++++
-## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-    update_write_proj_files.write(proj_dict, new_files_set)
-        
-## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## +++++ write record ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## +++++ write results  ++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    update_write_record.write(record_dict)
+    write.history(actual_df)
+    write.industry(ind_df)
+    write.projection(proj_dict, new_files_set)
+    write.record(record_dict)
     
     return

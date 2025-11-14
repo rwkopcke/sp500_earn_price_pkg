@@ -1,6 +1,6 @@
 [project]
 name = "sp500-earn-price-pkg"
-version = "1.0.0"
+version = "2.0.0"
 description = "Compare S&P 500's earn-price ratio to 10-yr TIPS rate"
 readme = "README.md"
 authors = [

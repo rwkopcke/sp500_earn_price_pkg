@@ -143,11 +143,18 @@ def find_wk_sheet(file, sheet_name):
         Return sheet (openpyxl) for reading
     '''
     path_name = env.INPUT_DIR / file
-    workbook = load_workbook(
-            filename= path_name,
-            read_only= True, 
-            data_only= True)
-    return workbook[sheet_name]
+    try:
+        workbook = load_workbook(
+                filename= path_name,
+                read_only= True, 
+                data_only= True)
+        return workbook[sheet_name]
+    except Exception as e:
+        hp.message([
+            f'failed to load \n{file}\n{sheet_name}',
+            'Check the workbook and sheet, then try again.'
+        ])
+        quit()
 
 
 def xlsx_block_reader(sheet, 
@@ -240,11 +247,8 @@ def key_finder(cell_list, name,
     if keys_to_find_list is not None:
         if not isinstance(keys_to_find_list, list):
             send_msg()
-            
-    #print('\t', keys_to_find_list)
     
     for idx, val in enumerate(cell_list[start_pos:]):
-        #print('\t\t', idx+start_pos, val, keys_to_find)
         pos = idx + start_pos
         if ((val is None) and
             (keys_to_find_list is None)):
@@ -521,15 +525,6 @@ def margin_loader(file, min_yr_qtr, cell_list):
     
     # build "tall" 2-col DF with 'year_qtr' and 'margin'
     
-    print()
-    print(file)
-    print(data)
-    print()
-    print(data[0])
-    print(col_names)
-    print(len(data[0]), len(col_names))
-    
-    
     df = pl.DataFrame(data, 
                       schema= col_names,
                       orient= 'row')\
@@ -549,8 +544,6 @@ def margin_loader(file, min_yr_qtr, cell_list):
                     .alias(yr_qtr))\
             .drop([rd_param.ANNUAL_DATE, qtrs])\
             .rename({'value': 'op_margin'})
-            
-    hp.my_df_print(df)
             
     return df
 
@@ -920,5 +913,9 @@ def proj_loader(file):
             .select(cs.by_dtype(pl.String, pl.Float64))\
             .cast({cs.float(): pl.Float32})
     df.columns = rd_param.PROJ_COLUMN_NAMES
+    df = df.with_columns(pl.col(date).map_batches(
+                hp.date_to_year_qtr, 
+                return_dtype= pl.String)
+            .alias(yr_qtr))
     
     return [df, year_quarter]
