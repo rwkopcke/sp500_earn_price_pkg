@@ -32,8 +32,10 @@ from ..helper_func_module import helper_func as hp
 from .code_segments.update_data import read_data as read
 from .code_segments.update_data import write_data_to_files as write
 
-import sp500_earn_price_pkg.config.config_paths as config
-import sp500_earn_price_pkg.config.set_params as params
+from ..config import config_paths as config
+from ..config import set_params as params
+
+# https://blog.dailydoseofds.com/p/how-to-simplify-python-imports-with
 
 env = config.Fixed_locations()
 param = params.Update_param()

@@ -8,8 +8,8 @@ from .code_segments.display_ind import read_ind_for_display
     
 from ..helper_func_module import helper_func as hp
     
-import sp500_earn_price_pkg.config.config_paths as config
-import sp500_earn_price_pkg.config.set_params as params
+from ..config import config_paths as config
+from ..config import set_params as params
 
 env = config.Fixed_locations()
 param = params.Display_ind_param()
