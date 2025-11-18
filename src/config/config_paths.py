@@ -15,6 +15,15 @@ from dataclasses import dataclass
 
 @dataclass(frozen= True, slots= True)
 class Fixed_locations:
+    # old source data, not in project's directory
+    ARCHIVE_DIR = \
+    Path('/Users/richardkopcke/Dropbox/Stock Analysis/sp_data_archive')
+    
+    # root for project, top-level proj directory
+    BASE_DIR = Path.cwd()
+    # dir for files containing structure of proj and params
+    GLOBAL_ENV = BASE_DIR / "config"
+    
     # source of new data, recorded in the output file
     # '.../sp500_earn_price_pkg/input_output/output_dir/record_dict.json'
     SP_SOURCE = \
@@ -23,8 +32,8 @@ class Fixed_locations:
     
     # keys without values for record_dict
     RECORD_DICT_TEMPLATE = \
-        {'sources': {'s&p': '',             
-                     'tips': ''},
+        {'sources': {'s&p': SP_SOURCE,             
+                     'tips': REAL_RATE_SOURCE},
         'latest_file': '',
         'prev_used_files': [],    # [str]
         'other_prev_files': []}   # [str]
@@ -33,13 +42,6 @@ class Fixed_locations:
     FILE_INPUT_WKBK_PREFIX = 'sp-'
     INPUT_SP_FILE_GLOB_STR = f'{FILE_INPUT_WKBK_PREFIX}*.xlsx'
     FILE_OUTPUT_WKBK_PREFIX = 'sp-eps'
-    
-    # root for project, top-level proj directory
-    BASE_DIR = Path.cwd()
-    
-    # fixed address, not in project's directory
-    ARCHIVE_DIR = \
-    Path('/Users/richardkopcke/Dropbox/Stock Analysis/sp_data_archive')
     
 ## ====================================================================
 ## ========== Set paths and addr within proj's dir ====================

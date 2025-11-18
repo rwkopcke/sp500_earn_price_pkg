@@ -2,8 +2,8 @@ import json
 import polars as pl
 import polars.selectors as cs
 
-import sp500_earn_price_pkg.config.config_paths as config
-import sp500_earn_price_pkg.config.set_params as params
+import config.config_paths as config
+import config.set_params as params
 
 from sp500_earn_price_pkg.helper_func_module \
     import helper_func as hp

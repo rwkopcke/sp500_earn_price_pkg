@@ -1,11 +1,13 @@
+from pathlib import Path
+
 import polars as pl
 import json
 
 from sp500_earn_price_pkg.helper_func_module \
     import helper_func as hp
     
-import sp500_earn_price_pkg.config.config_paths as config
-import sp500_earn_price_pkg.config.set_params as params
+import config.config_paths as config
+import config.set_params as params
 
 env = config.Fixed_locations()
 param = params.Update_param()
@@ -146,11 +148,6 @@ def record_dict(record_dict, input_files_set):
         list(all_files_set - used_files_set),
         reverse= True
     )
-        
-    record_dict['sources']['s&p'] = \
-        env.SP_SOURCE
-    record_dict['sources']['tips'] = \
-        env.REAL_RATE_SOURCE
     
     return [record_dict, new_files_set, files_to_read_set]
     

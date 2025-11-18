@@ -8,8 +8,9 @@
 from datetime import datetime
 import polars as pl
 
-import sp500_earn_price_pkg.config.set_params as params
-rd_param = params.Update_param()
+import config.set_params as params
+
+param = params.Update_param()
 
 
 def message(msg):
@@ -30,20 +31,20 @@ def cast_date_to_str(val):
     '''
         if val is either a 
             datetime object or contains
-            a date as str, in format: rd_param.DATE_FMT_SP_WKBK
-        return date as str, in format: rd_param.DATE_FMT
+            a date as str, in format: param.DATE_FMT_SP_WKBK
+        return date as str, in format: param.DATE_FMT
         
         Otherwise, return val
     '''
     if isinstance(val, datetime):
-        return val.strftime(rd_param.DATE_FMT)
+        return val.strftime(param.DATE_FMT)
     
     # if val contains valid str date, convert to datetime
     if isinstance(val, str):
         #isolates the date, if exists  
         return str_to_date(val, 
-                        rd_param.DATE_FMT_SP_WKBK,
-                        rd_param.DATE_FMT)
+                        param.DATE_FMT_SP_WKBK,
+                        param.DATE_FMT)
         # either date as str
     return val
         
@@ -54,7 +55,7 @@ def str_to_date(val, date_fmt_wkbk, date_fmt):
         If val is str that can be cast to a date
             using date_fmt,
         Return date as str
-            using rd_param.DATE_FMT
+            using param.DATE_FMT
         Otherwise,
             Return empty str obj
     '''
@@ -85,7 +86,7 @@ def str_is_date(val, proj_date_fmt):
 def file_to_date_str(series):
     '''
         Receives pl.Series (col from df), str file names
-        Extracts the date string from rd_param.DATE_FMT,
+        Extracts the date string from param.DATE_FMT,
         Returns: date as str object, as pl.Series
     '''
     return pl.Series(
@@ -134,8 +135,8 @@ def convert_date_str_to_wkbk_fmt(date):
         Returns date as a str in wkbk formot
     '''
     print(date, type(date))
-    return (f'{date[8:10]}{rd_param.DATE_SP_WKBK_SEP}' +
-            f'{date[-5:-3]}{rd_param.DATE_SP_WKBK_SEP}' +
+    return (f'{date[8:10]}{param.DATE_SP_WKBK_SEP}' +
+            f'{date[-5:-3]}{param.DATE_SP_WKBK_SEP}' +
             f'{date[0:4]}')
 
 

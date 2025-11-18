@@ -1,7 +1,7 @@
 import polars as pl
 import polars.selectors as cs
 
-import sp500_earn_price_pkg.config.config_paths as config
+import config.config_paths as config
 
 
 def read():

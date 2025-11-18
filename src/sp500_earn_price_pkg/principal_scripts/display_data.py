@@ -15,8 +15,8 @@ from .code_segments.display_data import plot_func as pf
 from ..helper_func_module import display_helper_func as dh
 from ..helper_func_module import helper_func as hp
     
-from ..config import config_paths as config
-from ..config import set_params as params
+import config.config_paths as config
+import config.set_params as params
 
 env = config.Fixed_locations()
 param = params.Display_param()

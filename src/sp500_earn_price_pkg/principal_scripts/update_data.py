@@ -32,8 +32,8 @@ from ..helper_func_module import helper_func as hp
 from .code_segments.update_data import read_data as read
 from .code_segments.update_data import write_data_to_files as write
 
-from ..config import config_paths as config
-from ..config import set_params as params
+import config.config_paths as config
+import config.set_params as params
 
 # https://blog.dailydoseofds.com/p/how-to-simplify-python-imports-with
 

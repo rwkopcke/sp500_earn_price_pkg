@@ -17,15 +17,15 @@ import polars.selectors as cs
 from sp500_earn_price_pkg.helper_func_module \
     import helper_func as hp
     
-import sp500_earn_price_pkg.config.config_paths as config
-import sp500_earn_price_pkg.config.set_params as params
+import config.config_paths as config
+import config.set_params as params
 
 env = config.Fixed_locations()
-rd_param = params.Update_param()
+param = params.Update_param()
 
-price = rd_param.PRICE_NAME
-date = rd_param.DATE_NAME
-yr_qtr = rd_param.YR_QTR_NAME
+price = param.PRICE_NAME
+date = param.DATE_NAME
+yr_qtr = param.YR_QTR_NAME
 rr_name = env.INPUT_RR_FILE
     
     
@@ -93,15 +93,15 @@ def ensure_consistent_file_names(names_set):
     
     input_dir = env.INPUT_DIR
     # limit # of rows to read in WKBK_DATE_COL
-    max = rd_param.MAX_DATE_ROWS
-    date_col = rd_param.WKBK_DATE_COL
+    max = param.MAX_DATE_ROWS
+    date_col = param.WKBK_DATE_COL
     
     output_sp_files_set = set()
     for file in names_set:
         path_name = input_dir / file
         sheet = find_wk_sheet(
             path_name,
-            rd_param.SHT_EST_NAME)
+            param.SHT_EST_NAME)
         
         # returns a simple list of vals in date_col
         first_col_list = \
@@ -113,7 +113,7 @@ def ensure_consistent_file_names(names_set):
         
         # find file's date for file's name
         for item in first_col_list:
-            if hp.str_is_date(item, rd_param.DATE_FMT):
+            if hp.str_is_date(item, param.DATE_FMT):
                 new_name_file = \
                     f'{env.FILE_OUTPUT_WKBK_PREFIX} {item}.xlsx'
                 # add name to return set
@@ -272,7 +272,7 @@ def find_qtrs_without_op_earn(df):
             for which operating eps is null
         otherwise, return empty set
     '''
-    df = df.filter(pl.col(rd_param.OP_E).is_null())\
+    df = df.filter(pl.col(param.OP_E).is_null())\
            .select(pl.col(date), pl.col(yr_qtr))
     date_set = set(df[date])
     df = df.filter(pl.col(yr_qtr)==min(df[yr_qtr]))\
@@ -289,7 +289,7 @@ def find_yrs_without_rep_earn(df):
             for which rep eps is null
         otherwise, return empty set
     '''
-    col_name = rd_param.FIRST_IND_NAME + rd_param.OP_EPS
+    col_name = param.FIRST_IND_NAME + param.OP_EPS
     df = df.select(pl.col('year'), pl.col(col_name))\
            .filter(pl.col(col_name).is_null())
            
@@ -326,7 +326,7 @@ def history_loader(file, min_date):
         sheet is a list of lists,
             a matrix extracted from the sheet
     '''
-    sheet = find_wk_sheet(file, rd_param.SHT_EST_NAME)
+    sheet = find_wk_sheet(file, param.SHT_EST_NAME)
     
     # fetch list of data, from first col of sheet
     # ensure all dates are expressed as strings
@@ -335,14 +335,14 @@ def history_loader(file, min_date):
     cell_list = \
         xlsx_block_reader(sheet, 
                     start_row= 1,
-                    first_col_ltr= rd_param.WKBK_DATE_COL, 
-                    last_col_ltr= rd_param.WKBK_DATE_COL,
+                    first_col_ltr= param.WKBK_DATE_COL, 
+                    last_col_ltr= param.WKBK_DATE_COL,
                     return_simple_list= True)
     
     # find start pos from values in cell list
     min_pos = key_finder(cell_list, 'hist_loader 1',
                          start_pos = 0,
-                         keys_to_find_list= rd_param.HISTORY_KEYS)
+                         keys_to_find_list= param.HISTORY_KEYS)
     
     # find stop pos: don't reload existing history (if any)
     # but load at least one row of history from current file
@@ -374,13 +374,13 @@ def history_loader(file, min_date):
                             start_row= min_row, 
                             stop_row= max_row,
                             first_col_ltr= 
-                                rd_param.HIST_EPS_COL_START, 
+                                param.HIST_EPS_COL_START, 
                             last_col_ltr= 
-                                rd_param.HIST_EPS_COL_STOP),
+                                param.HIST_EPS_COL_STOP),
                 orient= 'row')\
             .select(cs.by_dtype(pl.String, pl.Float64))\
             .cast({cs.float(): pl.Float32})
-    df.columns = rd_param.HIST_COLUMN_NAMES
+    df.columns = param.HIST_COLUMN_NAMES
     
     '''
             .with_columns(pl.col(date).map_elements(hp.cast_date_to_str,
@@ -392,13 +392,13 @@ def history_loader(file, min_date):
     recent_prices_df = pl.DataFrame(
             xlsx_block_reader(sheet, 
                             start_row= 
-                               min_row - rd_param.PRICE_OFFSET_1, 
+                               min_row - param.PRICE_OFFSET_1, 
                             stop_row= 
-                               min_row - rd_param.PRICE_OFFSET_2,
+                               min_row - param.PRICE_OFFSET_2,
                             first_col_ltr= 
-                               rd_param.PRICE_HST_COL_START, 
+                               param.PRICE_HST_COL_START, 
                             last_col_ltr= 
-                               rd_param.PRICE_HST_COL_STOP),
+                               param.PRICE_HST_COL_STOP),
             schema = [date, price],
             orient= 'row')\
         .filter(~pl.col(price).is_null())\
@@ -406,7 +406,7 @@ def history_loader(file, min_date):
         
     key_pos_num = key_finder(cell_list, 'history_loader 3',
                              start_pos= 1,
-                             keys_to_find_list= rd_param.PRICE_KEYS)
+                             keys_to_find_list= param.PRICE_KEYS)
     # offset for py's 0-based indexing
     key_row_num = key_pos_num + 1
     
@@ -414,9 +414,9 @@ def history_loader(file, min_date):
                             start_row= key_row_num, 
                             stop_row= key_row_num + 1,
                             first_col_ltr= 
-                               rd_param.PRICE_RCNT_COL, 
+                               param.PRICE_RCNT_COL, 
                             last_col_ltr= 
-                               rd_param.PRICE_RCNT_COL,
+                               param.PRICE_RCNT_COL,
                             return_simple_list= True)
     
     if date_ not in recent_prices_df[date]:
@@ -466,12 +466,12 @@ def margin_loader(file, min_yr_qtr, cell_list):
         return df
     '''
     
-    sheet = find_wk_sheet(file, rd_param.SHT_EST_NAME)
+    sheet = find_wk_sheet(file, param.SHT_EST_NAME)
     
     # find first row of block to be read
     min_pos_num = key_finder(cell_list, 'margin_loader 1',
                              start_pos= 1,
-                             keys_to_find_list= rd_param.MARG_KEYS)
+                             keys_to_find_list= param.MARG_KEYS)
     # offset for list's 0-based indexing
     min_row_number = min_pos_num + 1
     
@@ -480,7 +480,7 @@ def margin_loader(file, min_yr_qtr, cell_list):
         xlsx_block_reader(sheet, 
                     start_row= min_row_number, 
                     stop_row= min_row_number,
-                    first_col_ltr= rd_param.MARG_KEY_COL,
+                    first_col_ltr= param.MARG_KEY_COL,
                     return_simple_list= True)
     
     cell_list_along_row = [item[:4] if isinstance(item, str)
@@ -493,11 +493,11 @@ def margin_loader(file, min_yr_qtr, cell_list):
         stop_key = min_yr_qtr[:4]
     else:
         # read to the first blank col (all the years)
-        stop_key = rd_param.MARG_STOP_COL_KEY
+        stop_key = param.MARG_STOP_COL_KEY
    
     max_pos_number = \
         key_finder(cell_list_along_row, 'margin_loader 2',
-                   start_pos= rd_param.MARG_KEY_POS,
+                   start_pos= param.MARG_KEY_POS,
                    keys_to_find_list= [stop_key])
     
     if  min_yr_qtr:
@@ -514,9 +514,9 @@ def margin_loader(file, min_yr_qtr, cell_list):
     data = xlsx_block_reader(sheet, 
                     start_row= min_row_number + 1, 
                     stop_row= min_row_number + 
-                        rd_param.MARG_MAX_ROW_OFFSET,
+                        param.MARG_MAX_ROW_OFFSET,
                     first_col_ltr= 
-                        rd_param.MARG_KEY_COL, 
+                        param.MARG_KEY_COL, 
                     last_col_ltr= stop_col_ltr)
     
     # reverse offset for 0-based list vs xlsx cols
@@ -532,17 +532,17 @@ def margin_loader(file, min_yr_qtr, cell_list):
                               .map_elements(lambda x: x.split(' ')[0],
                                             return_dtype= str))\
                 .cast({cs.float(): pl.Float32})\
-                .unpivot(index= qtrs, variable_name= rd_param.ANNUAL_DATE)
+                .unpivot(index= qtrs, variable_name= param.ANNUAL_DATE)
             # index: names of cols to remain cols
             # variable_name: name of col to contain names of cols pivoted
     
     df = df.with_columns(
-                pl.struct([qtrs, rd_param.ANNUAL_DATE])\
+                pl.struct([qtrs, param.ANNUAL_DATE])\
                     .map_elements(lambda x: 
-                            (f"{x[rd_param.ANNUAL_DATE]}-{x[qtrs]}"),
+                            (f"{x[param.ANNUAL_DATE]}-{x[qtrs]}"),
                              return_dtype= pl.String)\
                     .alias(yr_qtr))\
-            .drop([rd_param.ANNUAL_DATE, qtrs])\
+            .drop([param.ANNUAL_DATE, qtrs])\
             .rename({'value': 'op_margin'})
             
     return df
@@ -554,20 +554,20 @@ def qtrly_loader(file, min_yr_qtr):
         correspond to those loaded here for the
         same quarter, so use yr_qtr
     '''
-    sheet = find_wk_sheet(file, rd_param.SHT_QTR_NAME)
+    sheet = find_wk_sheet(file, param.SHT_QTR_NAME)
         
     # find values down the rows
     cell_list = \
         xlsx_block_reader(sheet, 
                     start_row= 1,
                     stop_row= sheet.max_row,
-                    first_col_ltr= rd_param.QTR_HST_COL_START, 
-                    last_col_ltr= rd_param.QTR_HST_COL_START,
+                    first_col_ltr= param.QTR_HST_COL_START, 
+                    last_col_ltr= param.QTR_HST_COL_START,
                     return_simple_list= True)
         
     # convert dates in cell list to yr_qtr
     cell_list_to_yq = [hp.date_to_year_qtr([item])[0] 
-                       if hp.str_is_date(item, rd_param.DATE_FMT)
+                       if hp.str_is_date(item, param.DATE_FMT)
                        else item
                        for item in cell_list]
     
@@ -578,7 +578,7 @@ def qtrly_loader(file, min_yr_qtr):
         stop_key = None
         
     min_pos = key_finder(cell_list_to_yq, 'qtrly_loader 1',
-                         keys_to_find_list= rd_param.QTR_START_KEYS)
+                         keys_to_find_list= param.QTR_START_KEYS)
     # offset for 0-based list index: +1
     # offset to move to next row for data: +1
     min_row = min_pos + 2
@@ -598,10 +598,10 @@ def qtrly_loader(file, min_yr_qtr):
                             start_row= min_row, 
                             stop_row= max_row,
                             first_col_ltr= 
-                                rd_param.QTR_HST_COL_START, 
+                                param.QTR_HST_COL_START, 
                             last_col_ltr= 
-                                rd_param.QTR_HST_COL_STOP,
-                            skip_cols= rd_param.QTR_COL_TO_SKIP),
+                                param.QTR_HST_COL_STOP,
+                            skip_cols= param.QTR_COL_TO_SKIP),
                       orient= 'row')
     
     '''
@@ -610,7 +610,7 @@ def qtrly_loader(file, min_yr_qtr):
                     return_dtype= pl.String))
     '''
     
-    df.columns = rd_param.QTR_COLUMN_NAMES
+    df.columns = param.QTR_COLUMN_NAMES
     
     return df.filter(pl.col(date).is_not_null())\
              .with_columns(pl.col(date).map_batches(
@@ -628,14 +628,14 @@ def fred_reader(file, min_yr_qtr):
             for dates in dates_set
         return df
     '''
-    sheet = find_wk_sheet(file, rd_param.SHT_RR_NAME)
+    sheet = find_wk_sheet(file, param.SHT_RR_NAME)
     
-    [date, rr] = rd_param.RR_DF_SCHEMA
+    [date, rr] = param.RR_DF_SCHEMA
     
     if min_yr_qtr:
         min_yrqtr = min_yr_qtr
     else:
-        min_yrqtr = rd_param.RR_MIN_YR_QTR
+        min_yrqtr = param.RR_MIN_YR_QTR
     
     # end of qtr data in Fred is dated with the
     # first day of the quarter => convert to yrqtr
@@ -648,11 +648,11 @@ def fred_reader(file, min_yr_qtr):
     '''
     return pl.DataFrame(
             xlsx_block_reader(sheet, 
-                        start_row= rd_param.RR_MIN_ROW, 
+                        start_row= param.RR_MIN_ROW, 
                         stop_row= sheet.max_row,
-                        first_col_ltr= rd_param.RR_START_COL, 
-                        last_col_ltr= rd_param.RR_STOP_COL),
-            schema = rd_param.RR_DF_SCHEMA,
+                        first_col_ltr= param.RR_START_COL, 
+                        last_col_ltr= param.RR_STOP_COL),
+            schema = param.RR_DF_SCHEMA,
             orient= 'row')\
         .filter(~pl.col(rr).is_null())\
         .cast({rr: pl.Float32})\
@@ -686,27 +686,27 @@ def industry_loader(file, years_no_update_set):
         that contains history for industry data
         return df
     ''' 
-    sheet = find_wk_sheet(file, rd_param.SHT_IND_NAME)
+    sheet = find_wk_sheet(file, param.SHT_IND_NAME)
     
 ## +++++ read names of industries from 1st col
 ## find start and stop rows for data block
     cell_list = \
         xlsx_block_reader(sheet, 
                     start_row= 1,
-                    stop_row= rd_param.IND_INIT_ROW_ITER,
-                    first_col_ltr= rd_param.IND_SRCH_COL, 
-                    last_col_ltr= rd_param.IND_SRCH_COL,
+                    stop_row= param.IND_INIT_ROW_ITER,
+                    first_col_ltr= param.IND_SRCH_COL, 
+                    last_col_ltr= param.IND_SRCH_COL,
                     return_simple_list= True,
                     cast_date_to_str= False)
         
     # find positions of start & stop keys in cell_list
     min_pos = key_finder(cell_list, 'industry_loader 1',
                    start_pos= 0,
-                   keys_to_find_list= rd_param.IND_OP_START_KEYS)
+                   keys_to_find_list= param.IND_OP_START_KEYS)
     
     max_pos = key_finder(cell_list, 'industry_loader 2',
                    start_pos= min_pos,
-                   keys_to_find_list= rd_param.IND_OP_STOP_KEYS)
+                   keys_to_find_list= param.IND_OP_STOP_KEYS)
     
     # offset to row below start_key, +1
     # offset to adj list indexing to xlsx indexing,
@@ -721,7 +721,7 @@ def industry_loader(file, years_no_update_set):
     ind_name = ['_'.join(item.rstrip().split(' ')[2:])
                 for item in ind]
     # set first name
-    ind_name[0] = rd_param.FIRST_IND_NAME
+    ind_name[0] = param.FIRST_IND_NAME
     
 ## +++++  find data ids ++++++++++++++++++++
 ## find first and last col letters for block data
@@ -731,19 +731,19 @@ def industry_loader(file, years_no_update_set):
     
     cell_list_from_cols = \
         xlsx_block_reader(sheet, 
-                    start_row= start_row + rd_param.IND_OFFSET,
-                    stop_row= start_row + rd_param.IND_OFFSET,
-                    first_col_ltr= rd_param.IND_DATA_START_COL,
+                    start_row= start_row + param.IND_OFFSET,
+                    stop_row= start_row + param.IND_OFFSET,
+                    first_col_ltr= param.IND_DATA_START_COL,
                     return_simple_list= True,
                     cast_date_to_str= False)
         
     min_pos = key_finder(cell_list_from_cols, 'industry loader 3',
                    start_pos= 0,
-                   keys_to_find_list= rd_param.IND_DATA_FIRST_COL_KEY)
+                   keys_to_find_list= param.IND_DATA_FIRST_COL_KEY)
     
     max_pos = key_finder(cell_list_from_cols, 'industry loader 4',
                    start_pos= min_pos,
-                   keys_to_find_list= rd_param.IND_DATA_LAST_COL_KEY)
+                   keys_to_find_list= param.IND_DATA_LAST_COL_KEY)
     
     start_pos = min_pos
     stop_pos = max_pos - 1
@@ -758,9 +758,9 @@ def industry_loader(file, years_no_update_set):
 
     # includes correction for list 0-based indexing
     min_pos_xlsx_col = \
-          start_pos + rd_param.IND_DATA_START_COL_OFFSET + 1
+          start_pos + param.IND_DATA_START_COL_OFFSET + 1
     max_pos_xlsx_col = \
-         stop_pos + rd_param.IND_DATA_START_COL_OFFSET + 1
+         stop_pos + param.IND_DATA_START_COL_OFFSET + 1
         
     first_col_ltr = ut_cell.get_column_letter(min_pos_xlsx_col)
     last_col_ltr = ut_cell.get_column_letter(max_pos_xlsx_col)\
@@ -780,8 +780,8 @@ def industry_loader(file, years_no_update_set):
 ## ++++++++++++ op data +++++++++++++++++
     # fetch op e by industry, including row with headings
     # list of lists for each row
-    earn_type = rd_param.OP_EPS
-    ratio_type = rd_param.OP_PE
+    earn_type = param.OP_EPS
+    ratio_type = param.OP_PE
     
     df = separate_pivot_combine_eps_pe_df(sheet, 
             start_row, stop_row, first_col_ltr, last_col_ltr,
@@ -789,10 +789,10 @@ def industry_loader(file, years_no_update_set):
             years, earn_type, ratio_type)
     
 ## ++++++++++++ rep data +++++++++++++++++
-    start_row += rd_param.IND_REP_OFFSET_KEYS
-    stop_row = stop_row + rd_param.IND_REP_OFFSET_KEYS
-    earn_type = rd_param.REP_EPS
-    ratio_type = rd_param.REP_PE
+    start_row += param.IND_REP_OFFSET_KEYS
+    stop_row = stop_row + param.IND_REP_OFFSET_KEYS
+    earn_type = param.REP_EPS
+    ratio_type = param.REP_PE
     
     gf = separate_pivot_combine_eps_pe_df(sheet, 
             start_row, stop_row, first_col_ltr, last_col_ltr,
@@ -801,7 +801,7 @@ def industry_loader(file, years_no_update_set):
 
 ## ++++++++++++ Combine OP and REP +++++++
     df = df.join(gf,
-                   on= rd_param.ANNUAL_DATE,
+                   on= param.ANNUAL_DATE,
                    how= 'left',
                    coalesce= True)
     return df
@@ -833,7 +833,7 @@ def separate_pivot_combine_eps_pe_df(sheet,
                           columns_e, years)
     
     return df_e.join(df_pe,
-                   on= rd_param.ANNUAL_DATE,
+                   on= param.ANNUAL_DATE,
                    how= 'left',
                    coalesce= True)
     
@@ -875,26 +875,26 @@ def proj_loader(file):
                         file.split('.')[0][-10:]
                    ])[0]
     
-    sheet = find_wk_sheet(file, rd_param.SHT_EST_NAME)
+    sheet = find_wk_sheet(file, param.SHT_EST_NAME)
     
     # find first row of block of proj to read
     cell_list = \
         xlsx_block_reader(sheet, 
                     start_row= 1,
-                    first_col_ltr= rd_param.WKBK_DATE_COL, 
-                    last_col_ltr= rd_param.WKBK_DATE_COL,
+                    first_col_ltr= param.WKBK_DATE_COL, 
+                    last_col_ltr= param.WKBK_DATE_COL,
                     return_simple_list= True)\
-                        [:rd_param.PROJ_MAX_LIST]
+                        [:param.PROJ_MAX_LIST]
         
     # find positions of start & stop keys in cell_list
     min_pos = key_finder(cell_list,'proj loader 1',
                    start_pos= 0,
                    keys_to_find_list= \
-                       rd_param.PROJ_ROW_START_KEYS)
+                       param.PROJ_ROW_START_KEYS)
     max_pos = key_finder(cell_list, 'proj loader 2',
                          start_pos= min_pos,
                          keys_to_find_list= \
-                             rd_param.PROJ_ROW_STOP_KEYS)
+                             param.PROJ_ROW_STOP_KEYS)
 
     # offset to row below start_key, +1
     # offset to adj python indexing to xlsx indexing, +1
@@ -905,14 +905,14 @@ def proj_loader(file):
                          start_row= min_row, 
                          stop_row= max_row,
                          first_col_ltr= 
-                                rd_param.HIST_EPS_COL_START, 
+                                param.HIST_EPS_COL_START, 
                          last_col_ltr= 
-                                rd_param.HIST_EPS_COL_STOP,
-                         skip_cols= rd_param.PROJ_COLS_TO_SKIP),
+                                param.HIST_EPS_COL_STOP,
+                         skip_cols= param.PROJ_COLS_TO_SKIP),
                 orient= 'row')\
             .select(cs.by_dtype(pl.String, pl.Float64))\
             .cast({cs.float(): pl.Float32})
-    df.columns = rd_param.PROJ_COLUMN_NAMES
+    df.columns = param.PROJ_COLUMN_NAMES
     df = df.with_columns(pl.col(date).map_batches(
                 hp.date_to_year_qtr, 
                 return_dtype= pl.String)
