@@ -1,0 +1,6 @@
+{
+    "archive_path": "/Users/richardkopcke/Dropbox/Stock Analysis/sp_data_archive",
+    "sp_source": "www.spglobal.com/spdji/en/search/?query=index+earnings&activeTab=all",
+    "real_rate_source": "fred.stlouisfed.org/series/DFII10",
+    "rate_of_growth_of_sp_index": 0.05
+}

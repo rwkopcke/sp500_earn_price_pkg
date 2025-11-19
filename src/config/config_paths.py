@@ -11,26 +11,28 @@
 
 from pathlib import Path
 from dataclasses import dataclass
+import json
+
+# root for project, top-level proj directory
+BASE_DIR = Path.cwd()
+    
+# location of variable environment settings
+ENVIRONMENT = BASE_DIR / "environment.json"
+if ENVIRONMENT.exists():
+    with ENVIRONMENT.open('r') as f:
+        ENVIRONMENT_DICT = json.load(f)
 
 
 @dataclass(frozen= True, slots= True)
 class Fixed_locations:
+   
     # old source data, not in project's directory
-    ARCHIVE_DIR = \
-    Path('/Users/richardkopcke/Dropbox/Stock Analysis/sp_data_archive')
-    
-    # root for project, top-level proj directory
-    BASE_DIR = Path.cwd()
-    # dir for files containing structure of proj and params
-    GLOBAL_ENV = BASE_DIR / "config"
-    
+    ARCHIVE_DIR = Path(ENVIRONMENT_DICT['archive_path'])
     # source of new data, recorded in the output file
     # '.../sp500_earn_price_pkg/input_output/output_dir/record_dict.json'
-    SP_SOURCE = \
-        "https://www.spglobal.com/spdji/en/search/?query=index+earnings&activeTab=all"
-    REAL_RATE_SOURCE = "https://fred.stlouisfed.org/series/DFII10"
+    SP_SOURCE = Path("https://" + ENVIRONMENT_DICT['sp_source'])
+    REAL_RATE_SOURCE = Path("https://" + ENVIRONMENT_DICT[ 'real_rate_source'])
     
-    # keys without values for record_dict
     RECORD_DICT_TEMPLATE = \
         {'sources': {'s&p': SP_SOURCE,             
                      'tips': REAL_RATE_SOURCE},

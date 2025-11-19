@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from config import config_paths as env
+
 @dataclass(frozen= True, slots= True)
 class Update_param:
     ARCHIVE_RR_FILE = False
@@ -149,7 +151,7 @@ class Display_param:
     PAGE3_SOURCE = E_DATA_SOURCE + '\n\n' + RR_DATA_SOURCE
 
     # hyopothetical quarterly growth factor future stock prices
-    ROG = .05
+    ROG = env.ENVIRONMENT_DICT["rate_of_growth_of_sp_index"]
     ROG_AR = int(ROG * 100)
     ROGQ = (1. + ROG) ** (1/4)
 
