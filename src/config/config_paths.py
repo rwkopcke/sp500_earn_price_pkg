@@ -8,6 +8,7 @@
     params is accessed from other scripts by 
         from sp500_earn_price_pkg.config_paths import params
 '''
+import sys
 
 from pathlib import Path
 from dataclasses import dataclass
@@ -26,12 +27,22 @@ if ENVIRONMENT.exists():
 @dataclass(frozen= True, slots= True)
 class Fixed_locations:
    
-    # old source data, not in project's directory
-    ARCHIVE_DIR = Path(ENVIRONMENT_DICT['archive_path'])
+    # arch of previously used data files
+    # arch to be specified by user in environment.json
+    ARCHIVE_DIR = Path(ENVIRONMENT_DICT.get("archive_path", ""))
+    if ARCHIVE_DIR == Path(""):
+        print('\nERROR\n',
+              'In environment.json, either:\n',
+              '\tthe value for key "archive_path" is empty or\n',
+              '\tthe key "archive_path" is missing.\n',
+              'Provide the proper value for the key.\n')
+        sys.exit()
+
     # source of new data, recorded in the output file
     # '.../sp500_earn_price_pkg/input_output/output_dir/record_dict.json'
-    SP_SOURCE = Path("https://" + ENVIRONMENT_DICT['sp_source'])
-    REAL_RATE_SOURCE = Path("https://" + ENVIRONMENT_DICT[ 'real_rate_source'])
+    SP_SOURCE = Path(ENVIRONMENT_DICT.get('sp_source', None))
+    #SP_SOURCE_XLSX = PATH(ENVIRONMENT_DICT.get('sp_source_xlsx', None))
+    REAL_RATE_SOURCE = Path(ENVIRONMENT_DICT.get('real_rate_source', None))
     
     RECORD_DICT_TEMPLATE = \
         {'sources': {'s&p': SP_SOURCE,             

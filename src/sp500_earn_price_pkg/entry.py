@@ -1,3 +1,5 @@
+import sys
+
 # import principal scripts
 from sp500_earn_price_pkg.principal_scripts import (
         update_data, 
@@ -44,5 +46,5 @@ def main():
         # quit if choice does not conform
         if choice not in ['T', 't', 'True', 'Y', 'y', 'yes']:
             print(f'{choice} End process.')
-            quit()
+            sys.exit()
             

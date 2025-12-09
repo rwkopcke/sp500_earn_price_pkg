@@ -4,9 +4,10 @@ import matplotlib.pyplot as plt
 import seaborn as sn
 import numpy as np
 
-from .code_segments.display_ind import read_ind_for_display
+from sp500_earn_price_pkg.principal_scripts.code_segments.display_ind \
+    import read_ind_for_display
     
-from ..helper_func_module import helper_func as hp
+from sp500_earn_price_pkg.helper_func_module import helper_func as hp
     
 import config.config_paths as config
 import config.set_params as params

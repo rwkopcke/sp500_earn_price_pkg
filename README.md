@@ -172,7 +172,11 @@ sp500-earn-price-pkg v2.0.0
 <br>
 
 ## Instructions
-0. Set ARCHIVE_DIR
+0. In .../sp500_earn_price_pkg/environment.json:
+    - key "archive_path": required value "*absolute address for archive directory*"
+    - key "sp_source": optional value "*web address for SP's EPSEST xlsx*"
+    - key "real_rate_source": optional value "*web address for FRED's DFII10*"
+    - key ""rate_of_growth_of_sp_index": optional decimal value, defaults to 0.05, example annual rate of growth of stock prices during quarters of projected E, used only for page 1.
 
 1. Put new .xlsx from S&P into input_dir/    (S&P's id: EPSEST)
     - https://www.spglobal.com/spdji/en/search/?query=index+earnings&activeTab=all

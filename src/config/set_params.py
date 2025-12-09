@@ -1,3 +1,4 @@
+import polars as pl
 from dataclasses import dataclass
 
 from config import config_paths as env
@@ -7,56 +8,85 @@ class Update_param:
     ARCHIVE_RR_FILE = False
     
 # format for dates as str in sp xlsx file names
-    DATE_FMT = '%Y-%m-%d'
-    DATE_FMT_SP_WKBK = '%m/%d/%Y'
+    DATE_FMT = '%Y-%m-%d'          # fmt for this project
+    DATE_FMT_SP_WKBK = '%m/%d/%Y'  # fmt on sp xlsx
     DATE_SP_WKBK_SEP = '/'
     DATE_FMT_SEP = '-'
+
+# names for df cols
+    DATE_NAME = 'date'
+    YR_QTR_NAME = 'yr_qtr'
+    ANNUAL_DATE = 'year'
+    PRICE_NAME = 'price'
+    RR_NAME = 'real_int_rate'
+    IND_COL_NAME = 'ind'
+    E_METRIC_COL_NAME = 'earnings_metric'
+    IDX_COL_NAME = 'SP_Index'
     
-# date of wkbk
+    # root names for SP series
+    OP_EPS = 'op_eps'
+    OP_PE = 'op_pe'
+    REP_EPS = 'rep_eps'
+    REP_PE = 'rep_pe'
+    
+    # full-year E cols
+    YR_PFX = '12m_'
+    ANN_OP_EPS = YR_PFX + OP_EPS
+    ANN_REP_EPS = YR_PFX + REP_EPS
+    
+    # names for other qtrly data
+    DIV_PS = 'div_ps'
+    SALES_PS = 'sales_ps'
+    BOOK_PS = 'bk_val_ps'
+    CAPEX_PS = 'capex_ps'
+    DIVISOR = 'divisor'
+    
+# Enums for index, metric, ind cols
+    EARN_TYPES = ['op', 'rep']
+    EARN_METRICS = ['eps', 'p/e']
+    
+    EARN_ENUM = pl.Enum(EARN_TYPES)
+    METRICS_ENUM = pl.Enum(EARN_METRICS )
+    
+    # SP Index Types
+    SP500  = 'sp500'
+    SP400  = 'sp400'
+    SP600  = 'sp600'
+    SP1500 = 'sp1500'
+    SP_IDX_TYPES = [SP500, SP400, SP600, SP1500]
+    
+    IDX_ENUM = pl.Enum(SP_IDX_TYPES)
+    
+    IDX_OFFSET  = 13  # for "sector eps" sheet
+
+# history and project df
+    # name of sheet with history and proj data
+    SHT_EST_NAME = 'ESTIMATES&PEs'
+    
+    # to find date of sp input wkbks
     WKBK_DATE_COL = 'A'
     # max rows to read to find the date of a worksheet
     MAX_DATE_ROWS = 15
     
-# name of sheet with history and proj data
-    SHT_EST_NAME = 'ESTIMATES&PEs'
+    # cols for history inputs
+    HIST_COLUMN_NAMES = [DATE_NAME, PRICE_NAME, OP_EPS, REP_EPS,
+                OP_PE, REP_PE, ANN_OP_EPS, ANN_REP_EPS]
+    
+    # cols for projection inputs
+    PROJ_COLUMN_NAMES = [DATE_NAME, OP_EPS, REP_EPS,
+                        OP_PE, REP_PE, ANN_OP_EPS, ANN_REP_EPS]
 
-# data for sp files and actual df
-    DATE_NAME = 'date'
-    YR_QTR_NAME = 'yr_qtr'
-    ANNUAL_DATE = 'year'
+    # cols for other history inputs
+    MARG_COL_NAME = 'op_margin'
+    SHT_QTR_NAME = "QUARTERLY DATA"
+    QTR_COLUMN_NAMES = [DATE_NAME, DIV_PS, SALES_PS,
+                        BOOK_PS, CAPEX_PS, DIVISOR]
+    RR_DF_SCHEMA = [DATE_NAME, RR_NAME]
     
-    PRICE_NAME = 'price'
+    # cols for industry data
+    SHT_IND_NAME = 'SECTOR EPS'
     
-    RR_NAME = 'real_int_rate'
-    
-    PROJ_PREFIX_OUTPUT_FILE = 'sp-500-eps-est'
-    EXT_OUTPUT_FILE_NAME = '.parquet'
-    
-    # names of cols for SP aggregates series
-    OP_E = 'op_eps'
-    OP_V = 'op_pe'
-    REP_E = 'rep_eps'
-    REP_V = 'rep_pe'
-    
-    # suffix for names of cols for IND series
-    OP_EPS = '_' + OP_E
-    OP_PE = '_' + OP_V
-    REP_EPS = '_' + REP_E
-    REP_PE = '_' + REP_V
-    
-    # DATE_NAME is str (DATE_FMT_SP_FILE); the rest are Float32
-    # names for cols for history and projections for sp agg series
-    HIST_COLUMN_NAMES = [DATE_NAME, PRICE_NAME, OP_E, REP_E,
-                OP_V, REP_V, '12m' + OP_EPS, '12m' + REP_EPS]
-    PROJ_COLUMN_NAMES = [DATE_NAME, OP_E, REP_E,
-                        OP_V, REP_V, '12m' + OP_EPS, '12m' + REP_EPS]
-    
-    # ['date', 'price', 'yr_qtr', 'op_eps', 'rep_eps', 'op_p/e', 'rep_p/e', '12m_op_eps', 
-    # '12m_rep_eps', 'real_int_rate', 'op_margin', 'div_ps', 'sales_ps', 
-    # 'bk_val_ps', 'capex_ps', 'divisor']
-    #[ 'date', 'price', 'op_eps', 'rep_eps', 'op_pe', 'rep_pe', '12m_op_eps', '12m_rep_eps', 
-    # 'yr_qtr', 'op_margin', 'div_ps', 'sales_ps', 'bk_val_ps', 'capex_ps', 'divisor', 'real_int_rate']
-    
+
 # keys for history eps and price
     HISTORY_KEYS = ['ACTUALS', 'Actuals']
     PRICE_OFFSET_1 = 4
@@ -81,13 +111,10 @@ class Update_param:
     MARG_STOP_COL_KEY= 'None'
 
 # data from sp quarterly wksht
-    SHT_QTR_NAME = "QUARTERLY DATA"
     QTR_INIT_ROW_ITER = 10
     QTR_START_KEYS = ['END']
     QTR_HST_COL_START = 'A'
     QTR_HST_COL_STOP = 'I'
-    QTR_COLUMN_NAMES = [DATE_NAME, 'div_ps', 'sales_ps',
-                        'bk_val_ps', 'capex_ps', 'divisor']
     QTR_COL_TO_SKIP = [1, 2, 7]
     
 # data from FRED wksht
@@ -95,29 +122,27 @@ class Update_param:
     RR_MIN_ROW = 2
     RR_START_COL = 'A'
     RR_STOP_COL = 'B'
-    RR_DF_SCHEMA = [DATE_NAME, RR_NAME]
     # should be less than yr_qtr than any data from FRED
     RR_MIN_YR_QTR = '2000-Q1'
 
 # data from sp industry wksht
-    SHT_IND_NAME = 'SECTOR EPS'
-    FIRST_IND_NAME = 'SP500'
-    
     IND_SRCH_COL = 'A'
     IND_INIT_ROW_ITER = 30
     
     IND_OP_START_KEYS = ['S&P 500']
     IND_OP_STOP_KEYS = None
     IND_OFFSET = -2
-
-    IND_REP_OFFSET_KEYS = 55
+    
+    OP_REP_OFFSET = 55
     
     IND_DATA_FIRST_COL_KEY = ['2008 EPS']
     IND_DATA_LAST_COL_KEY = None
     IND_DATA_START_COL = 'D'
     IND_DATA_START_COL_OFFSET = 3
     
-
+    EPS_MK = 'EPS'
+    PE_MK = 'P/E'
+    
 # data from sp estimates sheet
     PROJ_MAX_LIST = 140
     PROJ_ROW_START_KEYS = ESTIMATES_KEYS
@@ -151,16 +176,17 @@ class Display_param:
     PAGE3_SOURCE = E_DATA_SOURCE + '\n\n' + RR_DATA_SOURCE
 
     # hyopothetical quarterly growth factor future stock prices
-    ROG = env.ENVIRONMENT_DICT["rate_of_growth_of_sp_index"]
+    ROG = env.ENVIRONMENT_DICT.get("rate_of_growth_of_sp_index", 0.05)
     ROG_AR = int(ROG * 100)
     ROGQ = (1. + ROG) ** (1/4)
 
-    HIST_COL_NAMES = ['date', 'yr_qtr', 'price', 'op_eps', 'rep_eps',
-                    'op_pe', 'rep_pe', '12m_op_eps', '12m_rep_eps',
-                    'op_margin', 'real_int_rate']
+    HIST_COL_NAMES = [*Update_param().HIST_COLUMN_NAMES,
+                     Update_param().MARG_COL_NAME,
+                     Update_param().RR_NAME,
+                     Update_param().YR_QTR_NAME]
 
     DATA_COLS_RENAME  = {'op_margin': 'margin',
-                        'real_int_rate': 'real_rate'}
+                         'real_int_rate': 'real_rate'}
     
 @dataclass(frozen= True, slots= True)
 class Display_ind_param:

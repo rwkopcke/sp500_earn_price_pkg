@@ -5,8 +5,8 @@
    access these values in other modules by
         import sp500_pe.read_data_func as rd
 '''
+import sys
 from datetime import datetime
-
 
 from openpyxl import load_workbook
 import openpyxl.utils.cell as ut_cell
@@ -26,6 +26,7 @@ param = params.Update_param()
 price = param.PRICE_NAME
 date = param.DATE_NAME
 yr_qtr = param.YR_QTR_NAME
+year = param.ANNUAL_DATE
 rr_name = env.INPUT_RR_FILE
     
     
@@ -84,8 +85,10 @@ def ensure_consistent_file_names(names_set):
             SHT_EST_NAME sheet, near the top of WKBK_DATE_COL
         amends the names of sp files in input_dir
             to conform to the format above
-        quit() if cannot find a date in the file
-        Returns the set of std names
+        sys.exit() if cannot find a date in the file
+        Return the set of std names, which includes no redundant
+            names: date in file name is date of projection; one
+            file per projection date.
         
     https://www.programiz.com/python-programming/datetime/strftime
     https://duckduckgo.com/?q=python+string+to+datetime&t=osx&ia=web
@@ -97,7 +100,7 @@ def ensure_consistent_file_names(names_set):
     date_col = param.WKBK_DATE_COL
     
     output_sp_files_set = set()
-    for file in names_set:
+    for file in sorted(names_set, reverse= True):
         path_name = input_dir / file
         sheet = find_wk_sheet(
             path_name,
@@ -112,25 +115,31 @@ def ensure_consistent_file_names(names_set):
                 return_simple_list= True)
         
         # find file's date for file's name
+        found_date = False
         for item in first_col_list:
             if hp.str_is_date(item, param.DATE_FMT):
+                found_date = True
                 new_name_file = \
                     f'{env.FILE_OUTPUT_WKBK_PREFIX} {item}.xlsx'
-                # add name to return set
-                output_sp_files_set.add(new_name_file)
-                # rename file
-                path_name.rename(input_dir / new_name_file)
+                # rename file, if file is not redundant
+                if new_name_file in output_sp_files_set:
+                    # delete, more recent version already exists
+                    path_name.unlink()
+                else:
+                    # add name to return set, update dir
+                    output_sp_files_set.add(new_name_file)
+                    path_name.rename(input_dir / new_name_file)
                 break
-        
-        # full inspection of col_date_list w/o finding a date
-        if not item:
+            
+        # traversed first_col_list w/o finding a date
+        if not found_date:
             hp.message([
                 'ERROR read_data_func.std_names for files',
                 'found no date in first {max} rows of',
                 f'{input_dir / file}',
                 'inspect file for date'
                 ])
-            quit()
+            sys.exit()
         
     return output_sp_files_set
 
@@ -154,7 +163,7 @@ def find_wk_sheet(file, sheet_name):
             f'failed to load \n{file}\n{sheet_name}',
             'Check the workbook and sheet, then try again.'
         ])
-        quit()
+        sys.exit()
 
 
 def xlsx_block_reader(sheet, 
@@ -239,7 +248,7 @@ def key_finder(cell_list, name,
             f'cell_list: {cell_list}',
             f'start pos: {start_pos}',
             f'keys to find: {keys_to_find_list}'])
-        quit()
+        sys.exit()
         
     if not isinstance(cell_list, list):
         send_msg()
@@ -272,7 +281,7 @@ def find_qtrs_without_op_earn(df):
             for which operating eps is null
         otherwise, return empty set
     '''
-    df = df.filter(pl.col(param.OP_E).is_null())\
+    df = df.filter(pl.col(param.OP_EPS).is_null())\
            .select(pl.col(date), pl.col(yr_qtr))
     date_set = set(df[date])
     df = df.filter(pl.col(yr_qtr)==min(df[yr_qtr]))\
@@ -289,11 +298,11 @@ def find_yrs_without_rep_earn(df):
             for which rep eps is null
         otherwise, return empty set
     '''
-    col_name = param.FIRST_IND_NAME + param.OP_EPS
-    df = df.select(pl.col('year'), pl.col(col_name))\
+    col_name = param.FIRST_IND_NAME + '_' + param.OP_EPS
+    df = df.select(pl.col(year), pl.col(col_name))\
            .filter(pl.col(col_name).is_null())
            
-    return set(df['year'])
+    return set(df[year])
                 
 
 def history_data():
@@ -454,7 +463,7 @@ def history_loader(file, min_date):
             f'{file} \nmissing date for new entries',
             df[date]
         ])
-        quit()
+        sys.exit()
 
     return [df, cell_list]
 
@@ -532,18 +541,18 @@ def margin_loader(file, min_yr_qtr, cell_list):
                               .map_elements(lambda x: x.split(' ')[0],
                                             return_dtype= str))\
                 .cast({cs.float(): pl.Float32})\
-                .unpivot(index= qtrs, variable_name= param.ANNUAL_DATE)
+                .unpivot(index= qtrs, variable_name= year)
             # index: names of cols to remain cols
             # variable_name: name of col to contain names of cols pivoted
     
     df = df.with_columns(
-                pl.struct([qtrs, param.ANNUAL_DATE])\
+                pl.struct([qtrs, year])\
                     .map_elements(lambda x: 
-                            (f"{x[param.ANNUAL_DATE]}-{x[qtrs]}"),
+                            (f"{x[year]}-{x[qtrs]}"),
                              return_dtype= pl.String)\
                     .alias(yr_qtr))\
-            .drop([param.ANNUAL_DATE, qtrs])\
-            .rename({'value': 'op_margin'})
+            .drop([year, qtrs])\
+            .rename({'value': param.MARG_COL_NAME})
             
     return df
 
@@ -717,11 +726,11 @@ def industry_loader(file, years_no_update_set):
     ind = [item.split(' (')[0]
            for item in cell_list[min_pos:max_pos]]
 
-    # remove 'S&P 500' and replace space with '_'
+    # remove 'S&P x00 ' and replace spaces with '_'
     ind_name = ['_'.join(item.rstrip().split(' ')[2:])
                 for item in ind]
     # set first name
-    ind_name[0] = param.FIRST_IND_NAME
+    ind_name[0] = ""
     
 ## +++++  find data ids ++++++++++++++++++++
 ## find first and last col letters for block data
@@ -763,55 +772,75 @@ def industry_loader(file, years_no_update_set):
          stop_pos + param.IND_DATA_START_COL_OFFSET + 1
         
     first_col_ltr = ut_cell.get_column_letter(min_pos_xlsx_col)
-    last_col_ltr = ut_cell.get_column_letter(max_pos_xlsx_col)\
-    
-    # get names for data
+    last_col_ltr = ut_cell.get_column_letter(max_pos_xlsx_col)
+    # get names for data, ie '2008 EPS'
+    '''
     date_data_names = [f'{name[:4]} {name[-3:]}'
                        for name in 
-                       cell_list_from_cols[start_pos : max_pos]]
-    columns_pe = [col
-                  for col in date_data_names
-                  if 'P/E' in col]
-    columns_e = [col 
-                 for col in date_data_names
-                 if 'EPS' in col]
-    years = [item[0:4] for item in columns_e]
+                       cell_list_from_cols[start_pos : stop_pos]]
+    '''
+    cols_schema =  cell_list_from_cols[start_pos : stop_pos]
     
-## ++++++++++++ op data +++++++++++++++++
-    # fetch op e by industry, including row with headings
-    # list of lists for each row
-    earn_type = param.OP_EPS
-    ratio_type = param.OP_PE
+    print('read_data.py, line 782')
+    print('stop_pos or max_pos? This uses stop_pos.')
+    print(cols_schema)
+    quit()
     
-    df = separate_pivot_combine_eps_pe_df(sheet, 
-            start_row, stop_row, first_col_ltr, last_col_ltr,
-            ind_name, date_data_names, columns_pe, columns_e, 
-            years, earn_type, ratio_type)
+    cols_e = [col for col in cols_schema
+              if param.EPS_MK in col]
+    cols_pe = [col for col in cols_schema
+               if param.PE_MK in col]
+    years = [item[:4] for item in cols_e]
     
-## ++++++++++++ rep data +++++++++++++++++
-    start_row += param.IND_REP_OFFSET_KEYS
-    stop_row = stop_row + param.IND_REP_OFFSET_KEYS
-    earn_type = param.REP_EPS
-    ratio_type = param.REP_PE
+## loop over the 4 SP indexes and the 2 types of earnings
+    first_base_row = start_row
+    end_base_row = stop_row
+    first_pass_through_loops = True
+    for index_type in param.SP_IDX_TYPES:
+        for e_type in param.EARN_TYPES:
+            if e_type == param.EARN_TYPES[0]:
+                first_row = first_base_row
+                end_row = end_base_row
+            else:
+                first_row += param.OP_REP_OFFSET
+                end_row += param.OP_REP_OFFSET
+                
+            gf = separate_transpose_combine_df(sheet, 
+                first_row, end_row, first_col_ltr, last_col_ltr,
+                ind_name, cols_schema, cols_e, cols_pe, years,
+                index_type, e_type)
+            
+            # join the 8 dfs, as they are produced
+            if first_pass_through_loops:
+                df = gf
+                first_pass_through_loops = False
+            else:
+                df = pl.concate([df, gf],
+                                how= 'vertical')
+        # do at end of all outside loops, except the last
+        if not (index_type == param.SP_IDX_TYPES[-1:]):
+            first_base_row += param.IDX_OFFSET
+            end_base_row += param.IDX_OFFSET
     
-    gf = separate_pivot_combine_eps_pe_df(sheet, 
-            start_row, stop_row, first_col_ltr, last_col_ltr,
-            ind_name, date_data_names, columns_pe, columns_e, 
-            years, earn_type, ratio_type)
-
-## ++++++++++++ Combine OP and REP +++++++
-    df = df.join(gf,
-                   on= param.ANNUAL_DATE,
-                   how= 'left',
-                   coalesce= True)
+    hp.my_df_print(df)
+    
     return df
 
 
-def separate_pivot_combine_eps_pe_df(sheet, 
+def separate_transpose_combine_df(sheet, 
         start_row, stop_row, first_col_ltr, last_col_ltr,
-        ind_name, date_data_names, columns_pe, columns_e, 
-        years, earn_type, ratio_type):
+        ind_name, cols_schema, cols_e, cols_pe, years,
+        index_tyoe, e_type, earn_level, earn_ratio):
     '''
+        Read block of annual data from sheet
+        Separate level of earnings from pe ratios
+        Rejoin these two mini blocks via vertical concat
+        Transpose block of data from ind x year to
+            yr x ind
+        Add 3 columns to identify the data in each row
+            SP index {same for all rows in a block}, 
+            type of earnings (op or rep) {ditto},
+            level or pe ratio {same for all rows in each mini block}
     '''
     data = xlsx_block_reader(sheet, 
                              start_row= start_row,
@@ -822,20 +851,20 @@ def separate_pivot_combine_eps_pe_df(sheet,
                              cast_date_to_str= False)
 
     df = pl.DataFrame(data, 
-                      schema= date_data_names,
+                      schema= cols_schema,
                       orient= 'row')\
            .cast({cs.float(): pl.Float32})
-    
+           
     # select and pivot to years for rows, data type for cols
-    df_pe = hp.gen_sub_df(df, ind_name, ratio_type, 
-                          columns_pe, years)
-    df_e  = hp.gen_sub_df(df, ind_name, earn_type, 
-                          columns_e, years)
-    
-    return df_e.join(df_pe,
-                   on= param.ANNUAL_DATE,
-                   how= 'left',
-                   coalesce= True)
+    df_pe = hp.transpose_df(df, ind_name, param.EARN_METRICS[1],
+                            index_tyoe, e_type, cols_pe, years)
+    hp.my_df_print(df_pe)
+    df_e  = hp.transpose_df(df, ind_name, param.EARN_METRICS[0], 
+                            index_tyoe, e_type, cols_e, years)
+    hp.my_df_print(df_e)
+    quit()
+    return pl.concate([df_e, df_pe],
+                      how= 'vertical')
     
     
 def projection_data():

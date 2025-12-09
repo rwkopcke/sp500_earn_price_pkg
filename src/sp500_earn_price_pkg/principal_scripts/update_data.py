@@ -26,11 +26,14 @@
 import polars as pl
 import polars.selectors as cs
 
-from .code_segments.update_data import update_record
+from sp500_earn_price_pkg.principal_scripts.code_segments.update_data \
+    import update_record
 
-from ..helper_func_module import helper_func as hp
-from .code_segments.update_data import read_data as read
-from .code_segments.update_data import write_data_to_files as write
+from sp500_earn_price_pkg.helper_func_module import helper_func as hp
+from sp500_earn_price_pkg.principal_scripts.code_segments.update_data \
+    import read_data as read
+from sp500_earn_price_pkg.principal_scripts.code_segments.update_data \
+    import write_data_to_files as write
 
 import config.config_paths as config
 import config.set_params as params
@@ -121,7 +124,7 @@ def update():
         min_date_to_update = None
         min_yr_qtr_to_update = None
     
-## NEW HISTORICAL DATA from latest sp file
+## NEW HISTORICAL DATA for SP500 from latest sp file
     # activate latest xlsx wkbk and sheet with data for sp
     [add_df, cell_list] = read.history_loader(
                                     latest_file,
@@ -136,7 +139,7 @@ def update():
                          on= param.YR_QTR_NAME,
                          coalesce= True)
 
-## QUARTERLY DATA add to add_df
+## QUARTERLY DATA for SP500 add to add_df
     # ensure all dtypes (if not string or date-like) are float32
     # some dtype are null when all col entries in short df are null
     add_df = add_df.join(read.qtrly_loader(latest_file,
@@ -177,6 +180,11 @@ def update():
 
     # read stored data
     ind_df = read.industry_data()
+    
+    hp.my_df_print(ind_df)
+    quit()
+    
+    
     if not ind_df.is_empty():
         years_no_update_set = \
             read.find_yrs_without_rep_earn(ind_df)

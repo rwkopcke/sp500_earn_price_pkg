@@ -1,3 +1,5 @@
+import sys
+
 import json
 import polars as pl
 import polars.selectors as cs
@@ -13,8 +15,8 @@ param = params.Display_param()
 
 
 def history(record_dict):
-    list_ = [item[7:17] 
-             for item in record_dict['prev_used_files']]
+    #list_ = [item[7:17] 
+    #         for item in record_dict['prev_used_files']]
     #yr_qtr_set = set(hp.date_to_year_qtr(list_).to_list())
     
     if env.OUTPUT_HIST_ADDR.exists():
@@ -30,7 +32,7 @@ def history(record_dict):
             f'at: \n{env.OUTPUT_HIST_ADDR}',
             'Processing ended'
         ])
-        quit()
+        sys.exit()
         
     return data_df  #, sorted(yr_qtr_set)
 
@@ -61,7 +63,7 @@ def projection():
             f'No file at \n{env.OUTPUT_PROJ_ADDR}',
             'Processing ended'
         ])
-        quit()
+        sys.exit()
     
     return proj_dict, sorted(set(proj_dict.keys()), reverse= True)
 
@@ -79,7 +81,7 @@ def record():
             f'at: \n{env.RECORD_DICT_ADDR}',
             'Processing ended'
         ])
-        quit()
+        sys.exit()
         
     # returns proj's date
     date_this_projn = record_dict['latest_file'][7:17]

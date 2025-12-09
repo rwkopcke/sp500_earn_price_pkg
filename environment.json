@@ -1,6 +1,13 @@
 {
-    "archive_path": "/Users/richardkopcke/Dropbox/Stock Analysis/sp_data_archive",
-    "sp_source": "www.spglobal.com/spdji/en/search/?query=index+earnings&activeTab=all",
-    "real_rate_source": "fred.stlouisfed.org/series/DFII10",
+    "sp_source": 
+        "https://www.spglobal.com/spdji/en/search/?query=index+earnings&activeTab=all",
+    "sp_source_xlsx": 
+        "https://www.spglobal.com/spdji/en/documents/additional-material/sp-500-eps-est.xlsx",
+    "real_rate_source": 
+        "https://fred.stlouisfed.org/series/DFII10",
+
+    "archive_path": 
+        "/Users/richardkopcke/Dropbox/Stock Analysis/sp_data_archive",
+
     "rate_of_growth_of_sp_index": 0.05
 }

@@ -9,11 +9,13 @@
 import polars as pl
 import matplotlib.pyplot as plt
 
-from .code_segments.display_data import read_data_for_display as read
-from .code_segments.display_data import plot_func as pf
+from sp500_earn_price_pkg.principal_scripts.code_segments.display_data \
+    import read_data_for_display as read
+from sp500_earn_price_pkg.principal_scripts.code_segments.display_data \
+    import plot_func as pf
     
-from ..helper_func_module import display_helper_func as dh
-from ..helper_func_module import helper_func as hp
+from sp500_earn_price_pkg.helper_func_module import display_helper_func as dh
+from sp500_earn_price_pkg.helper_func_module import helper_func as hp
     
 import config.config_paths as config
 import config.set_params as params

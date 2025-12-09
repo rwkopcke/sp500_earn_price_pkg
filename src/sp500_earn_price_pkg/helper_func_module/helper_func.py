@@ -11,7 +11,8 @@ import polars as pl
 import config.set_params as params
 
 param = params.Update_param()
-
+year_col_name = param.ANNUAL_DATE
+ind_col_name = param.IND_COL_NAME
 
 def message(msg):
     '''
@@ -140,31 +141,39 @@ def convert_date_str_to_wkbk_fmt(date):
             f'{date[0:4]}')
 
 
-def gen_sub_df(df, ind_name, suffix, col_select, years):
+def transpose_df(df, ind_name, earn_metric,
+                index_tyoe, e_type,col_select, years):
     '''
-        describe
+        transposes df and
+        add cols for 
+            SP index, type of earnings, measure of earnings
     '''
 
-    # construct list of industries: "row index"
-    cols = [item + suffix
-            for item in ind_name]
-    # one-col DF
-    col_names = pl.DataFrame(cols, schema= ['IND'])
+    # twp-col DF ind, containing df's col names 
+    col_names = pl.DataFrame(ind_name, 
+                             schema= ind_col_name)
     
-    # filter cols of df
+    # filter cols of df, eps or pe
     gf = df.select(col_select)
-    # rename cols of gf to simply years
+    # rename cols of gf, using years
     gf.columns = years
     # add col of col_names to gf
-    # pivot industries to become new cols
+    # melt cols into one col of years, one col of values
+    # pivot ind into cols with values from 'value'
     gf = pl.concat([col_names, gf], 
                    how= 'horizontal')\
-           .unpivot(index= 'IND', variable_name= 'year')\
-           .pivot(on= 'IND', values= 'value')
+           .unpivot(index= ind_col_name, variable_name= year_col_name)\
+           .pivot(on= ind_col_name, values= 'value')\
+           .with_columns(pl.lit(index_tyoe)
+                           .alias(param.IDX_COL_NAME),
+                         pl.lit(e_type)
+                           .alias(param.EARNINGS_COL_NAME),
+                         pl.lit(earn_metric)
+                           .alias(param.E_METRIC_COL_NAME))
     return gf
 
 
-def my_df_print(df, n_rows=30):
+def my_df_print(df, n_rows=40):
     '''
         custom print df function to format data
     '''                                
