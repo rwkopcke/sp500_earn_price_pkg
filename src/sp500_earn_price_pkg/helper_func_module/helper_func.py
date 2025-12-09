@@ -142,7 +142,7 @@ def convert_date_str_to_wkbk_fmt(date):
 
 
 def transpose_df(df, ind_name, earn_metric,
-                index_tyoe, e_type,col_select, years):
+                index_type, e_type,col_select, years):
     '''
         transposes df and
         add cols for 
@@ -164,11 +164,11 @@ def transpose_df(df, ind_name, earn_metric,
                    how= 'horizontal')\
            .unpivot(index= ind_col_name, variable_name= year_col_name)\
            .pivot(on= ind_col_name, values= 'value')\
-           .with_columns(pl.lit(index_tyoe)
+           .with_columns(pl.lit(index_type, dtype= param.IDX_ENUM)
                            .alias(param.IDX_COL_NAME),
-                         pl.lit(e_type)
+                         pl.lit(e_type, dtype= param.EARN_ENUM)
                            .alias(param.EARNINGS_COL_NAME),
-                         pl.lit(earn_metric)
+                         pl.lit(earn_metric, dtype= param.METRICS_ENUM)
                            .alias(param.E_METRIC_COL_NAME))
     return gf
 
