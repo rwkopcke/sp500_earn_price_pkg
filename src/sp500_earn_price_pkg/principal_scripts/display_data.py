@@ -21,7 +21,8 @@ import config.config_paths as config
 import config.set_params as params
 
 env = config.Fixed_locations()
-param = params.Display_param()
+param = params.Update_param()
+disp = params.Display_param()
 
 # https://mateuspestana.github.io/tutorials/pandas_to_polars/
 # https://www.rhosignal.com/posts/polars-pandas-cheatsheet/
@@ -68,10 +69,10 @@ def display():
     ax = fig.subplot_mosaic([['operating'],
                              ['reported']])
     fig.suptitle(
-        f'{param.PAGE0_SUPTITLE}\n{date_this_projn}',
+        f'{disp.PAGE0_SUPTITLE}\n{date_this_projn}',
         fontsize=13,
         fontweight='bold')
-    fig.supxlabel(param.PAGE0_SOURCE, fontsize= 8)
+    fig.supxlabel(disp.PAGE0_SOURCE, fontsize= 8)
 
     # subsets of columns for op eps (top panel)
     # use rows that match keys for proj_dict
@@ -122,10 +123,10 @@ def display():
     ax = fig.subplot_mosaic([['operating'],
                              ['reported']])
     fig.suptitle(
-        f'{param.PAGE1_SUPTITLE}\n{date_this_projn}\n ',
+        f'{disp.PAGE1_SUPTITLE}\n{date_this_projn}\n ',
         fontsize=13,
         fontweight='bold')
-    fig.supxlabel(param.PAGE1_SOURCE, fontsize= 8)
+    fig.supxlabel(disp.PAGE1_SOURCE, fontsize= 8)
     
     # create the top and bottom graphs for op and rep pe
     # new DF with cols for p/e and alt p/e, both using 12m trailing E
@@ -142,11 +143,11 @@ def display():
     p_df = proj_dict[yr_qtr_current_projn]\
                 .select(['yr_qtr', '12m_op_eps'])
     
-    df = dh.page1_df(df, p_df, '12m_op_eps', param.ROGQ )
+    df = dh.page1_df(df, p_df, '12m_op_eps', disp.ROGQ )
     
     denom = 'divided by projected earnings'
     legend1 = f'price (constant after {date_this_projn})\n{denom}'
-    legend2 = f'price (increases {param.ROG_AR}% ar after {date_this_projn})\n{denom}'
+    legend2 = f'price (increases {disp.ROG_AR}% ar after {date_this_projn})\n{denom}'
     
     df = df.rename({'pe': 'historical',
                'fix_proj_p/e': legend1,
@@ -166,7 +167,7 @@ def display():
     p_df = proj_dict[yr_qtr_current_projn]\
                .select(['yr_qtr', '12m_rep_eps'])
     
-    df = dh.page1_df(df, p_df, '12m_rep_eps', param.ROGQ )
+    df = dh.page1_df(df, p_df, '12m_rep_eps', disp.ROGQ )
     
     df = df.rename({'pe': 'historical',
                     'fix_proj_p/e': legend1,
@@ -197,10 +198,10 @@ def display():
                              ['quality'],
                              ['premium']])
     fig.suptitle(
-        f'{param.PAGE2_SUPTITLE}\n{date_this_projn}\n',
+        f'{disp.PAGE2_SUPTITLE}\n{date_this_projn}\n',
         fontsize=13,
         fontweight='bold')
-    fig.supxlabel(param.PAGE2_SOURCE, fontsize= 8)
+    fig.supxlabel(disp.PAGE2_SOURCE, fontsize= 8)
     
     # create the top and bottom graphs for margins and premiums
     # create working df for op margins (top panel)
@@ -279,10 +280,10 @@ def display():
     ax = fig.subplot_mosaic([['operating'],
                              ['reported']])
     fig.suptitle(
-        f'{param.PAGE3_SUPTITLE}\n{date_this_projn}\n',
+        f'{disp.PAGE3_SUPTITLE}\n{date_this_projn}\n',
         fontsize=13,
         fontweight='bold')
-    fig.supxlabel(param.PAGE3_SOURCE, fontsize= 8)
+    fig.supxlabel(disp.PAGE3_SOURCE, fontsize= 8)
     
     xlabl = '\nquarter of projection, price, and TIPS rate\n\n'
     ylabl = ' \npercent\n '

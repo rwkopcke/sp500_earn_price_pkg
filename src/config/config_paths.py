@@ -45,8 +45,8 @@ class Fixed_locations:
     REAL_RATE_SOURCE = Path(ENVIRONMENT_DICT.get('real_rate_source', None))
     
     RECORD_DICT_TEMPLATE = \
-        {'sources': {'s&p': SP_SOURCE,             
-                     'tips': REAL_RATE_SOURCE},
+        {'sources': {'s&p': ENVIRONMENT_DICT.get('sp_source', None),             
+                     'tips': ENVIRONMENT_DICT.get('real_rate_source', None)},
         'latest_file': '',
         'prev_used_files': [],    # [str]
         'other_prev_files': []}   # [str]

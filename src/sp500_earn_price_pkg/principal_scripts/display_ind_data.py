@@ -13,98 +13,71 @@ import config.config_paths as config
 import config.set_params as params
 
 env = config.Fixed_locations()
-param = params.Display_ind_param()
+param = params.Update_param()
+disp = params.Display_ind_param()
+
+year = param.ANNUAL_DATE
+earnings_metric = param.E_METRIC_COL_NAME
+earnings_type = param.E_TYPE_COL_NAME
 
 
 def display_ind():
-    ind_df, op_e_df, year, DATE_THIS_PROJECTION = \
-        read_ind_for_display.read()
-    
-    '''
-# SCATTER PLOTS ++++++++++++++++++++++++++++++++++++++++++++++++++++
-    # PAGE 4
-    # create scatter graphs for p/e
-    
-    fig = plt.figure(figsize=(8.5, 11), 
-                     layout="constrained")
-    # one plot over another: 2 rows with each plot a "full row"
-    ax = fig.subplot_mosaic([['operating'],
-                             ['reported']])
-    fig.suptitle(
-        f'{PAGE4_SUPTITLE}\n{DATE_THIS_PROJECTION}',
-        fontsize=13,
-        fontweight='bold')
-    fig.supxlabel(PAGE4_SOURCE, fontsize= 8)
-    
-    # prepare op_e_df: choose pe, remove suffix for col names
-    # remove last col with real interest rates
-    # op_e_plot_df =
-    pf.plots_page4(ax['operating'], 
-                   op_e_plot_df.select(op_e_plot_df.columns[:-1]),
-                   title= ' \n1-Year Forward Operating Earnings', 
-                   ylim = (-50, 200),
-                   xlabl= XLABL,
-                   ylabl= ' \n')
-    
-    # prepare rep_e_df: choose pe, remove suffix for col names
-    # remove last col with real interest rates
-    # rep_e_plot_df =
-    pf.plots_page4(ax['reported'], 
-                   rep_e_plot_df.select(rep_e_plot_df.columns[:-1]),
-                   title= ' \n1-Year Forward Reported Earnings', 
-                   ylim = (-50, 200),
-                   xlabl= XLABL,
-                   ylabl= ' \n')
-                   
-    print('\n============================')
-    print(sp.DISPLAY_4_ADDR)
-    print('============================\n')
-    fig.savefig(str(sp.DISPLAY_4_ADDR))
-    '''
+    ind_df = read_ind_for_display.read()
     
 # SEABORN SCATTERPLOTS WITH JITTER +++++++++++++++++++++++++++++++++
 # https://matplotlib.org/stable/users/explain/axes/constrainedlayout_guide.html#sphx-glr-users-explain-axes-constrainedlayout-guide-py
 # https://matplotlib.org/stable/users/explain/axes/tight_layout_guide.html#sphx-glr-users-explain-axes-tight-layout-guide-py
 # https://matplotlib.org/stable/users/explain/axes/arranging_axes.html
 # https://drzinph.com/how-to-box-plot-with-python/
-    # PAGE 4
+    # PAGE 4\
     
     # create tall DF with year, industry, and p/e as columns
-    df = op_e_df.select(pl.exclude('real int rate'))\
-                .drop(cs.matches('SP500'))\
-                .unpivot(index= 'year',
-                         variable_name= 'industry',
-                         value_name= 'price/earnings')
+    df = ind_df.filter(pl.col(earnings_metric) == param.EARN_METRICS[1],
+                       pl.col(earnings_type) == param.EARN_TYPES[0])\
+               .drop(pl.col(earnings_metric),
+                     pl.col(earnings_type),
+                     pl.col(param.RR_NAME),
+                     pl.col(param.IDX_E_COL_NAME))
+    # simplify col headings
+    df.columns = [name.replace("_", " ")
+                  for name in df.columns]
+    df = df.unpivot(index= year,
+                    variable_name= 'name',
+                    value_name= 'value')
     
     fig = plt.figure(figsize=(10.5, 8.5), 
                      layout="constrained")
     # plt.tight_layout(pad= 0.5)
     
     fig.suptitle(
-        '\n' + param.PAGE4_SUPTITLE,
+        '\n' + disp.PAGE4_SUPTITLE,
         fontsize=13,
         fontweight='bold')
-    fig.supxlabel(f'{param.PAGE4_SOURCE}\n ', fontsize= 8)
+    fig.supxlabel(f'{disp.PAGE4_SOURCE}\n ', fontsize= 8)
     
     ax = fig.subplots()
     
     sn.stripplot(
         df,
-        x="year",
-        y="price/earnings",
-        hue="industry",
+        x= year,
+        y= "value",
+        hue= "name",
         ax=ax,
     )
     
-    sn.scatterplot(op_e_df.select(pl.col('year','SP500')),
-                   x= 'year',
-                   y= 'SP500',
-                   label= 'SP500',
+    gf = ind_df.filter(pl.col(earnings_metric) == param.EARN_METRICS[1],
+                       pl.col(earnings_type) == param.EARN_TYPES[0])\
+               .select(pl.col(year, param.IDX_E_COL_NAME))
+    
+    sn.scatterplot(gf,
+                   x= year,
+                   y= param.IDX_E_COL_NAME,
+                   label= param.SP500,
                    marker="|", s=4, linewidth=25
 )
     plt.xticks(rotation = 30)
     ax.set_ylim(ymin= -50, ymax= 60)
-    ax.set_xlabel(param.XLABL, fontweight= 'bold')
+    ax.set_xlabel(disp.XLABL, fontweight= 'bold')
     ax.set_ylabel(' \nprice-earnings ratio', fontweight= 'bold')
     sn.move_legend(ax, 'lower left')
     box = ax.get_position()
@@ -132,12 +105,21 @@ def display_ind():
 # https://stackoverflow.com/questions/27988846/how-to-express-classes-on-the-axis-of-a-heatmap-in-seaborn/27992943#27992943
 
     # PAGE 5
-    op_e_cor_df = op_e_df.drop('year')\
-                         .filter(pl.col('real int rate').is_not_null())\
-                         .to_pandas()
+    
+    # tidy and convert to pandas
+    df = ind_df.filter(pl.col(earnings_metric) == param.EARN_METRICS[1],
+                       pl.col(earnings_type) == param.EARN_TYPES[0])\
+               .drop(pl.col(earnings_metric),
+                     pl.col(earnings_type),
+                     pl.col(year))
+    # simplify col headings
+    df.columns = [name.replace("_", " ")
+                  for name in df.columns]
+    pdf = df.to_pandas()
+    pdf.rename(columns={param.IDX_E_COL_NAME: param.SP500}, inplace=True)
     
     # this creates several axes: row_dendrogram, col_dendrogram, cbar
-    cg = sn.clustermap(op_e_cor_df.corr(),
+    cg = sn.clustermap(pdf.corr(),
                        #annot=True, fmt=".1f",
                        #cmap= 'Blues',
                        cmap= 'RdYlGn',
@@ -154,7 +136,7 @@ def display_ind():
     cg.figure.subplots_adjust(top=0.87)
     
     cg.figure.suptitle(
-        f' \n{param.PAGE5_SUPTITLE}',
+        f' \n{disp.PAGE5_SUPTITLE}',
         fontsize=13,
         fontweight='bold')
     # plt.tight_layout(pad= 0.5)
@@ -224,35 +206,41 @@ def display_ind():
     # one plot
     ax = fig.subplots()
     fig.suptitle(
-        '\n' + param.PAGE6_SUPTITLE,
+        '\n' + disp.PAGE6_SUPTITLE,
         fontsize= 13,
         fontweight= 'bold')
-    fig.supxlabel(param.PAGE4_SOURCE, fontsize= 8)
+    fig.supxlabel(disp.PAGE4_SOURCE, fontsize= 8)
     
+    # shift from pe to op E data and remove cols w/o E data for ind
+    df = ind_df.filter(pl.col(earnings_metric) == param.EARN_METRICS[0],
+                       pl.col(earnings_type) == param.EARN_TYPES[0])\
+               .drop(pl.col(earnings_metric),
+                     pl.col(earnings_type),
+                     pl.col(param.RR_NAME),
+                     pl.col(param.IDX_E_COL_NAME))
+    yr_series = pl.Series(df.select(year)).to_list()
+    df = df.drop(pl.col(year))
+    # simplify col headings
+    ind_names = [name.replace("_", " ")
+                 for name in df.columns]
+    df.columns = ind_names
     
-    # remove pe data, simplify column names
-    op_e_df = ind_df.drop(cs.matches('_pe'))
-    op_e_df.columns = [name.split('_op_')[0].replace("_", " ")
-                       for name in op_e_df.columns]
-    
-    # prepare data
-    mat_np = op_e_df.drop('real int rate', 'year', 'SP500').to_numpy()
+    # prepare data, remove negative E
+    mat_np = df.to_numpy()
     mat_np[mat_np < 0] = 0
     
-    ind_names = op_e_df.drop('real int rate', 'year', 'SP500')\
-                       .columns
+    # sort ind_name and ind_size together by ind_size
     ind_size = mat_np.sum(axis=0).tolist()
-    yr_series = pl.Series(op_e_df.select('year')).to_list()
     iterate = sorted(list(zip(ind_names, ind_size)),
                      key= lambda x: x[1],
                      reverse= True)
     ind_names_sorted = [x[0] for x in iterate]
     
-    dist_np = op_e_df.select(ind_names_sorted)\
-                        .to_numpy()
-    dist_np[dist_np < 0] = 0.
-    dist_np = (dist_np / 
-                  dist_np.sum(axis=1)[:, np.newaxis]).T
+    mat_np = df.select(ind_names_sorted)\
+               .to_numpy()
+    mat_np[mat_np < 0] = 0.
+    mat_np = (mat_np / 
+              mat_np.sum(axis=1)[:, np.newaxis]).T
     
     # create the plot
     width = 0.5
@@ -263,10 +251,10 @@ def display_ind():
     # this loop loads each row (layer) to allocate to each year's bar
     # initialize bottom at zero for all years, then increase
     # after each layer's value for each year
-    for idx in range(len(dist_np)):
-        p = ax.bar(yr_series, dist_np[idx, :], width, 
+    for idx in range(len(mat_np)):
+        p = ax.bar(yr_series, mat_np[idx, :], width, 
                    label= ind_names_sorted[idx], bottom= bottom)
-        bottom += dist_np[idx, :]
+        bottom += mat_np[idx, :]
         
     #ax.legend(loc="lower center", reverse= True)
     plt.xticks(rotation = 30)

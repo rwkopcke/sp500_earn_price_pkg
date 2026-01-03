@@ -249,6 +249,7 @@ sp500-earn-price-pkg v2.0.0
 
 
 #### Future improvements
+- Make idempotent: write no files unless execution finishes successfully
 - Tidy the logic/code in the scripts, incl separating functions in code
     - validate input files
     - check for new data
@@ -256,7 +257,4 @@ sp500-earn-price-pkg v2.0.0
     - add new page of equity premiums using 1-yr TIPS & projected E/P
 - Convert the data structure from polars dataframes to duckdb
     - do not reload existing data from db
-    - only insert new rows and tables
-- Add chron feature to fetch new data from each week
-    - fetch s&p .xlsx files with renaming
-    - fetch corresponding data from Fred 
+    - only insert new rows and tables 

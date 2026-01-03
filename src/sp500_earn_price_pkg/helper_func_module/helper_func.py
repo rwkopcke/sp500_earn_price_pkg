@@ -10,9 +10,16 @@ import polars as pl
 
 import config.set_params as params
 
+# short name aliases
 param = params.Update_param()
 year_col_name = param.ANNUAL_DATE
 ind_col_name = param.IND_COL_NAME
+
+# polars categorical data
+index_enum = param.INDEX_ENUM
+earn_type_enum = param.EARN_TYPE_ENUM
+earn_metric_enum = param.EARN_METRIC_ENUM
+year_enum = param.YEAR_ENUM
 
 def message(msg):
     '''
@@ -142,16 +149,15 @@ def convert_date_str_to_wkbk_fmt(date):
 
 
 def transpose_df(df, ind_name, earn_metric,
-                index_type, e_type,col_select, years):
+                index_type, e_type, col_select, years):
     '''
         transposes df and
         add cols for 
             SP index, type of earnings, measure of earnings
     '''
 
-    # twp-col DF ind, containing df's col names 
-    col_names = pl.DataFrame(ind_name, 
-                             schema= ind_col_name)
+    # one-col DF ind, containing df's col names 
+    col_names = pl.DataFrame({ind_col_name: ind_name})
     
     # filter cols of df, eps or pe
     gf = df.select(col_select)
@@ -164,12 +170,13 @@ def transpose_df(df, ind_name, earn_metric,
                    how= 'horizontal')\
            .unpivot(index= ind_col_name, variable_name= year_col_name)\
            .pivot(on= ind_col_name, values= 'value')\
-           .with_columns(pl.lit(index_type, dtype= param.IDX_ENUM)
-                           .alias(param.IDX_COL_NAME),
-                         pl.lit(e_type, dtype= param.EARN_ENUM)
-                           .alias(param.EARNINGS_COL_NAME),
-                         pl.lit(earn_metric, dtype= param.METRICS_ENUM)
-                           .alias(param.E_METRIC_COL_NAME))
+           .with_columns(pl.lit(index_type, dtype= index_enum)
+                           .alias(param.IDX_TYPE_COL_NAME),
+                         pl.lit(e_type, dtype= earn_type_enum)
+                           .alias(param.E_TYPE_COL_NAME),
+                         pl.lit(earn_metric, dtype= earn_metric_enum)
+                           .alias(param.E_METRIC_COL_NAME))\
+           .cast({year_col_name: year_enum})
     return gf
 
 

@@ -28,6 +28,11 @@ date = param.DATE_NAME
 yr_qtr = param.YR_QTR_NAME
 year = param.ANNUAL_DATE
 rr_name = env.INPUT_RR_FILE
+
+index = param.IDX_E_COL_NAME
+index_type = param.IDX_TYPE_COL_NAME
+earnings_type = param.E_TYPE_COL_NAME
+earnings_metric = param.E_METRIC_COL_NAME
     
     
 def verify_valid_input_files():
@@ -292,17 +297,23 @@ def find_qtrs_without_op_earn(df):
 def find_yrs_without_rep_earn(df):
     '''
         Receives pl.df
-        Return the set of rows to update
+        Return the set of years to update
         If df is not empty
             the set of yrs
             for which rep eps is null
         otherwise, return empty set
     '''
-    col_name = param.FIRST_IND_NAME + '_' + param.OP_EPS
-    df = df.select(pl.col(year), pl.col(col_name))\
-           .filter(pl.col(col_name).is_null())
-           
-    return set(df[year])
+    
+    if df.is_empty():
+        return pl.DataFrame()
+    
+    gf = df.filter(
+        (pl.col(index_type) == param.SP_IDX_TYPES[0]) &
+        (pl.col(earnings_type) == param.EARN_TYPES[1]) &
+        (pl.col(earnings_metric) == param.EARN_METRICS[0]) &
+        (pl.col(index).is_null()))
+    
+    return set((item for item in gf[year]))
                 
 
 def history_data():
@@ -684,17 +695,37 @@ def industry_data():
             ind_df = pl.read_parquet(f)
         with env.BACKUP_IND_TEMP_ADDR.open('wb') as f:
             ind_df.write_parquet(f)
+        
+        col_lst = update_col_names(ind_df.columns)
+        ind_df.columns = col_lst
         return ind_df
+    
     else:
         return pl.DataFrame()
+    
+    
+def update_col_names(lst):
+    '''
+    Docstring for update_col_names
+    
+    :return: Description
+    :rtype: Any
+    '''
+    try:
+        idx = lst.index(param.TELECOM_SERV)
+        lst[idx] = param.COM_SERV
+    except ValueError:
+        pass
+    return lst
         
 
-def industry_loader(file, years_no_update_set):
+def industry_loader(file, years_to_update_set):
     '''
         read data from s&p excel worksheet
         that contains history for industry data
         return df
-    ''' 
+    '''
+    
     sheet = find_wk_sheet(file, param.SHT_IND_NAME)
     
 ## +++++ read names of industries from 1st col
@@ -717,9 +748,10 @@ def industry_loader(file, years_no_update_set):
                    start_pos= min_pos,
                    keys_to_find_list= param.IND_OP_STOP_KEYS)
     
-    # offset to row below start_key, +1
-    # offset to adj list indexing to xlsx indexing,
+    # convert to row numbers in xlsx
+    # offset to adj list indexing to xlsx indexing + 1
     start_row = min_pos + 1
+    # additional offset, - 1, because stop key is one row below data block
     stop_row = max_pos
     
     # remove parentheticals
@@ -729,12 +761,14 @@ def industry_loader(file, years_no_update_set):
     # remove 'S&P x00 ' and replace spaces with '_'
     ind_name = ['_'.join(item.rstrip().split(' ')[2:])
                 for item in ind]
+    
+    ind_name = update_col_names(ind_name)
     # set first name
-    ind_name[0] = ""
+    ind_name[0] = param.IND_COL_NAME
     
 ## +++++  find data ids ++++++++++++++++++++
 ## find first and last col letters for block data
-    # search the first row of dates (offset -2)
+    # search first row of dates, 2 rows above start row (offset -2)
     # for years that are not in years_no_update_set
     # get data from row with years in the cols
     
@@ -754,37 +788,29 @@ def industry_loader(file, years_no_update_set):
                    start_pos= min_pos,
                    keys_to_find_list= param.IND_DATA_LAST_COL_KEY)
     
-    start_pos = min_pos
-    stop_pos = max_pos - 1
-    if years_no_update_set:
+    # find new min_pos: year > max(years_no_update_set)
+    if years_to_update_set:
         # trim cell_list_from_cols to new start col
-        max_year_no_update = max(years_no_update_set)
-        while start_pos <= stop_pos:  # offset from col with None
-            if cell_list_from_cols[start_pos][:4] > \
-               max_year_no_update:
+        min_year_to_update = int(min(years_to_update_set))
+        while min_pos <= max_pos - 2:  
+            if int(cell_list_from_cols[min_pos][:4]) >= \
+               min_year_to_update:
                 break
-            start_pos += 1
-
-    # includes correction for list 0-based indexing
+            min_pos += 2 #for each year, EPS col and PE col
+            
+    # convert to col numbers in xlsx
+    # offset to adj list indexing to xlsx indexing + 1
     min_pos_xlsx_col = \
-          start_pos + param.IND_DATA_START_COL_OFFSET + 1
+          min_pos + param.IND_DATA_START_COL_OFFSET + 1
+    # additional offset, - 1, stop key is one col after data block
     max_pos_xlsx_col = \
-         stop_pos + param.IND_DATA_START_COL_OFFSET + 1
+         max_pos + param.IND_DATA_START_COL_OFFSET
         
     first_col_ltr = ut_cell.get_column_letter(min_pos_xlsx_col)
     last_col_ltr = ut_cell.get_column_letter(max_pos_xlsx_col)
-    # get names for data, ie '2008 EPS'
-    '''
-    date_data_names = [f'{name[:4]} {name[-3:]}'
-                       for name in 
-                       cell_list_from_cols[start_pos : stop_pos]]
-    '''
-    cols_schema =  cell_list_from_cols[start_pos : stop_pos]
     
-    print('read_data.py, line 782')
-    print('stop_pos or max_pos? This uses stop_pos.')
-    print(cols_schema)
-    quit()
+    # create names of columns for finished df
+    cols_schema =  cell_list_from_cols[min_pos : max_pos]
     
     cols_e = [col for col in cols_schema
               if param.EPS_MK in col]
@@ -796,6 +822,7 @@ def industry_loader(file, years_no_update_set):
     first_base_row = start_row
     end_base_row = stop_row
     first_pass_through_loops = True
+    
     for index_type in param.SP_IDX_TYPES:
         for e_type in param.EARN_TYPES:
             if e_type == param.EARN_TYPES[0]:
@@ -804,7 +831,7 @@ def industry_loader(file, years_no_update_set):
             else:
                 first_row += param.OP_REP_OFFSET
                 end_row += param.OP_REP_OFFSET
-                
+            
             gf = separate_transpose_combine_df(sheet, 
                 first_row, end_row, first_col_ltr, last_col_ltr,
                 ind_name, cols_schema, cols_e, cols_pe, years,
@@ -815,14 +842,12 @@ def industry_loader(file, years_no_update_set):
                 df = gf
                 first_pass_through_loops = False
             else:
-                df = pl.concate([df, gf],
-                                how= 'vertical')
-        # do at end of all outside loops, except the last
+                df = pl.concat([df, gf],
+                               how= 'vertical')
+        # do at end of all index_type loops, except the last
         if not (index_type == param.SP_IDX_TYPES[-1:]):
             first_base_row += param.IDX_OFFSET
             end_base_row += param.IDX_OFFSET
-    
-    hp.my_df_print(df)
     
     return df
 
@@ -830,7 +855,7 @@ def industry_loader(file, years_no_update_set):
 def separate_transpose_combine_df(sheet, 
         start_row, stop_row, first_col_ltr, last_col_ltr,
         ind_name, cols_schema, cols_e, cols_pe, years,
-        index_tyoe, e_type, earn_level, earn_ratio):
+        index_type, e_type):
     '''
         Read block of annual data from sheet
         Separate level of earnings from pe ratios
@@ -842,6 +867,7 @@ def separate_transpose_combine_df(sheet,
             type of earnings (op or rep) {ditto},
             level or pe ratio {same for all rows in each mini block}
     '''
+    
     data = xlsx_block_reader(sheet, 
                              start_row= start_row,
                              stop_row= stop_row,
@@ -857,14 +883,13 @@ def separate_transpose_combine_df(sheet,
            
     # select and pivot to years for rows, data type for cols
     df_pe = hp.transpose_df(df, ind_name, param.EARN_METRICS[1],
-                            index_tyoe, e_type, cols_pe, years)
-    hp.my_df_print(df_pe)
+                            index_type, e_type, cols_pe, years)
+  
     df_e  = hp.transpose_df(df, ind_name, param.EARN_METRICS[0], 
-                            index_tyoe, e_type, cols_e, years)
-    hp.my_df_print(df_e)
-    quit()
-    return pl.concate([df_e, df_pe],
-                      how= 'vertical')
+                            index_type, e_type, cols_e, years)
+    
+    return pl.concat([df_e, df_pe],
+                     how= 'vertical')
     
     
 def projection_data():

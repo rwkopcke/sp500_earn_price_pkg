@@ -181,10 +181,6 @@ def update():
     # read stored data
     ind_df = read.industry_data()
     
-    hp.my_df_print(ind_df)
-    quit()
-    
-    
     if not ind_df.is_empty():
         years_no_update_set = \
             read.find_yrs_without_rep_earn(ind_df)
@@ -200,23 +196,25 @@ def update():
                     actual_df.select([yr_qtr, param.RR_NAME])
                              .filter(pl.col(yr_qtr)
                                        .map_elements(lambda x: x[-1:]=='4',
-                                                return_dtype= bool))
+                                            return_dtype= pl.Boolean))
                              .with_columns(pl.col(yr_qtr)
-                                    .map_elements(lambda x: x[0:4],
-                                                return_dtype= str)
-                                    .alias(year))
+                                       .map_elements(lambda x: x[0:4],
+                                            return_dtype= pl.String)
+                                       .alias(year))
+                             .cast({year: param.YEAR_ENUM})
                              .drop(yr_qtr),
                     on= year,
                     how= 'left',
                     coalesce= True)\
             .sort(by= year, descending= True)\
-            .cast({~cs.string() : pl.Float32})
+            .cast({cs.float() : pl.Float32})
     
     if ind_df.is_empty():
         ind_df = add_ind_df.sort(by= year, 
                                  descending= True)
     else:
         years = pl.Series(add_ind_df[year]).to_list()
+        
         ind_df = pl.concat([add_ind_df,
                             ind_df.filter(
                                 ~pl.col(year)

@@ -13,15 +13,39 @@ class Update_param:
     DATE_SP_WKBK_SEP = '/'
     DATE_FMT_SEP = '-'
 
+# Polars Enum()
+    # year range - ENSURE THAT THIS RANGE CONTAINS ALL DATES
+    YEAR_ENUM = pl.Enum([str(yr) for yr in range(1980, 2101)])
+    
+    EARN_TYPES = ['op', 'rep']
+    EARN_METRICS = ['eps', 'p/e']
+    
+    SP500  = 'SP500'
+    SP400  = 'SP400'
+    SP600  = 'SP600'
+    SP1500 = 'SP1500'
+    SP_IDX_TYPES = [SP500, SP400, SP600, SP1500]
+    
+    IDX_OFFSET  = 13  # for "sector eps" sheet
+    
+    INDEX_ENUM = pl.Enum(SP_IDX_TYPES)
+    EARN_TYPE_ENUM = pl.Enum(EARN_TYPES)
+    EARN_METRIC_ENUM = pl.Enum(EARN_METRICS)
+
 # names for df cols
     DATE_NAME = 'date'
     YR_QTR_NAME = 'yr_qtr'
     ANNUAL_DATE = 'year'
     PRICE_NAME = 'price'
     RR_NAME = 'real_int_rate'
-    IND_COL_NAME = 'ind'
+    IDX_E_COL_NAME = 'index'
+    E_TYPE_COL_NAME = 'earnings_type'
     E_METRIC_COL_NAME = 'earnings_metric'
-    IDX_COL_NAME = 'SP_Index'
+    IDX_TYPE_COL_NAME = 'index_type'
+    IND_COL_NAME = 'index'
+    
+    # cols to drop
+    E_COLS_DROP = ['Real_Estate']
     
     # root names for SP series
     OP_EPS = 'op_eps'
@@ -40,24 +64,6 @@ class Update_param:
     BOOK_PS = 'bk_val_ps'
     CAPEX_PS = 'capex_ps'
     DIVISOR = 'divisor'
-    
-# Enums for index, metric, ind cols
-    EARN_TYPES = ['op', 'rep']
-    EARN_METRICS = ['eps', 'p/e']
-    
-    EARN_ENUM = pl.Enum(EARN_TYPES)
-    METRICS_ENUM = pl.Enum(EARN_METRICS )
-    
-    # SP Index Types
-    SP500  = 'sp500'
-    SP400  = 'sp400'
-    SP600  = 'sp600'
-    SP1500 = 'sp1500'
-    SP_IDX_TYPES = [SP500, SP400, SP600, SP1500]
-    
-    IDX_ENUM = pl.Enum(SP_IDX_TYPES)
-    
-    IDX_OFFSET  = 13  # for "sector eps" sheet
 
 # history and project df
     # name of sheet with history and proj data
@@ -69,7 +75,7 @@ class Update_param:
     MAX_DATE_ROWS = 15
     
     # cols for history inputs
-    HIST_COLUMN_NAMES = [DATE_NAME, PRICE_NAME, OP_EPS, REP_EPS,
+    HIST_COLUMN_NAMES = [YR_QTR_NAME, PRICE_NAME, OP_EPS, REP_EPS,
                 OP_PE, REP_PE, ANN_OP_EPS, ANN_REP_EPS]
     
     # cols for projection inputs
@@ -88,7 +94,7 @@ class Update_param:
     
 
 # keys for history eps and price
-    HISTORY_KEYS = ['ACTUALS', 'Actuals']
+    HISTORY_KEYS = ['ACTUALS', 'Actuals', 'ACTUAL']
     PRICE_OFFSET_1 = 4
     PRICE_OFFSET_2 = 2
     
@@ -126,6 +132,10 @@ class Update_param:
     RR_MIN_YR_QTR = '2000-Q1'
 
 # data from sp industry wksht
+    # for read_data.py, industry_loader(), to update ind name
+    TELECOM_SERV = 'Telecommunication_Services'
+    COM_SERV = 'Communication_Services'
+
     IND_SRCH_COL = 'A'
     IND_INIT_ROW_ITER = 30
     
