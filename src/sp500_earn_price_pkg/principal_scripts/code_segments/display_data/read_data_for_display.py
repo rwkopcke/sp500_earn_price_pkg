@@ -10,8 +10,9 @@ import config.set_params as params
 from sp500_earn_price_pkg.helper_func_module \
     import helper_func as hp
 
-env = config.Fixed_locations()
-param = params.Update_param()
+env = config.Fixed_locations
+param = params.Update_param
+disp = params.Display_param
 
 
 def history(record_dict):
@@ -22,11 +23,8 @@ def history(record_dict):
     if env.OUTPUT_HIST_ADDR.exists():
         with env.OUTPUT_HIST_ADDR.open('r') as f:
             data_df = pl.read_parquet(source= f,
-                                      columns= [
-                                          *param.HIST_COLUMN_NAMES,
-                                          param.MARG_COL_NAME,
-                                          param.RR_NAME
-                                          ])
+                                      columns= disp.HIST_COL_NAMES)\
+                        .drop(pl.col(param.DATE_NAME))
         hp.message([
             f'Read data history from: \n{env.OUTPUT_HIST_ADDR}'
         ])

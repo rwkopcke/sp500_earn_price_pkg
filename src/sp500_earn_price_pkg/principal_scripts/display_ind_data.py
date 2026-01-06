@@ -12,9 +12,9 @@ from sp500_earn_price_pkg.helper_func_module import helper_func as hp
 import config.config_paths as config
 import config.set_params as params
 
-env = config.Fixed_locations()
-param = params.Update_param()
-disp = params.Display_ind_param()
+env = config.Fixed_locations
+param = params.Update_param
+disp = params.Display_ind_param
 
 year = param.ANNUAL_DATE
 earnings_metric = param.E_METRIC_COL_NAME

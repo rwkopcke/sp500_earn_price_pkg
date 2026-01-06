@@ -7,8 +7,8 @@ from sp500_earn_price_pkg.helper_func_module \
 import config.config_paths as config
 import config.set_params as params
 
-env = config.Fixed_locations()
-param = params.Update_param()
+env = config.Fixed_locations
+param = params.Update_param
 
 date = param.DATE_NAME
 yr_qtr = param.YR_QTR_NAME

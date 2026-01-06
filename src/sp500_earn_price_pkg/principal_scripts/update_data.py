@@ -40,13 +40,12 @@ import config.set_params as params
 
 # https://blog.dailydoseofds.com/p/how-to-simplify-python-imports-with
 
-env = config.Fixed_locations()
-param = params.Update_param()
+env = config.Fixed_locations
+param = params.Update_param
 
 date = param.DATE_NAME
 yr_qtr = param.YR_QTR_NAME
 year = param.ANNUAL_DATE
-
 
 def update():
     ''' Check Input files from S&P and Fred for new data

@@ -6,7 +6,7 @@ import config.config_paths as config
 from sp500_earn_price_pkg.helper_func_module \
     import helper_func as hp
 
-env = config.Fixed_locations()
+env = config.Fixed_locations
 
 
 def record(record_dict):

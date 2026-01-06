@@ -4,9 +4,9 @@ import polars.selectors as cs
 import config.config_paths as config
 import config.set_params as params
 
-env = config.Fixed_locations()
-param = params.Update_param()
-displ = params.Display_ind_param()
+env = config.Fixed_locations
+param = params.Update_param
+displ = params.Display_ind_param
 
 year = param.ANNUAL_DATE
 

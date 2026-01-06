@@ -20,8 +20,8 @@ from sp500_earn_price_pkg.helper_func_module \
 import config.config_paths as config
 import config.set_params as params
 
-env = config.Fixed_locations()
-param = params.Update_param()
+env = config.Fixed_locations
+param = params.Update_param
 
 price = param.PRICE_NAME
 date = param.DATE_NAME
@@ -764,7 +764,7 @@ def industry_loader(file, years_to_update_set):
     
     ind_name = update_col_names(ind_name)
     # set first name
-    ind_name[0] = param.IND_COL_NAME
+    ind_name[0] = param.IDX_E_COL_NAME
     
 ## +++++  find data ids ++++++++++++++++++++
 ## find first and last col letters for block data

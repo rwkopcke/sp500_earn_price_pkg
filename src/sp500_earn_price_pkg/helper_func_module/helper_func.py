@@ -13,7 +13,7 @@ import config.set_params as params
 # short name aliases
 param = params.Update_param()
 year_col_name = param.ANNUAL_DATE
-ind_col_name = param.IND_COL_NAME
+ind_col_name = param.IDX_E_COL_NAME
 
 # polars categorical data
 index_enum = param.INDEX_ENUM
