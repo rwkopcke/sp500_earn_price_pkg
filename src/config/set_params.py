@@ -1,28 +1,40 @@
+'''
+    Set fixed global parameters
+'''
+
 import polars as pl
 from dataclasses import dataclass
+from datetime import datetime
 
 from config import config_paths as env
 
 
 @dataclass(frozen= True, slots= True)
 class Update_param:
+    '''
+    Parameters for the dataframes, for the data files,
+    and for updating the files with new data extracted
+    from xlsx 
+    '''
+    
     ARCHIVE_RR_FILE = False
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #           DATES FORMATS
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     DATE_FMT = '%Y-%m-%d'          # fmt for this project
+    DATE_FMT_SEP = '-'
     DATE_FMT_SP_WKBK = '%m/%d/%Y'  # fmt on sp xlsx
     DATE_SP_WKBK_SEP = '/'
-    DATE_FMT_SEP = '-'
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #           ENUMS FOR POLARS (categorical variables)
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     # year range - ENSURE THAT THIS RANGE COVERS ALL YEARS of DATA
-    YEAR_ENUM = pl.Enum([str(yr) for yr in range(1980, 2101)])
+    MAX_YR = datetime.now().year + 5
+    YEAR_ENUM = pl.Enum([str(yr) for yr in range(1980, MAX_YR)])
 
-    # Earnings types and guages to collect
+    # Earnings types and gauges to fetch
     EARN_TYPES = ['op', 'rep']
     EARN_METRICS = ['eps', 'p/e']
     EARN_TYPE_ENUM = pl.Enum(EARN_TYPES)
@@ -50,7 +62,6 @@ class Update_param:
     OP_PE = 'op_pe'
     REP_EPS = 'rep_eps'
     REP_PE = 'rep_pe'
-    
     ANN_OP_EPS = '12m_' + OP_EPS
     ANN_REP_EPS = '12m_' + REP_EPS
     
@@ -62,15 +73,16 @@ class Update_param:
     DIVISOR = 'divisor'
 
     # Ind DF
-    IDX_E_COL_NAME = 'index'   # E for the index
+    IDX_E_COL_NAME = 'index'   # contains E for the index
+    # other cols contain E for the various ind in the index
     E_TYPE_COL_NAME = 'earnings_type'
     E_METRIC_COL_NAME = 'earnings_metric'
     IDX_TYPE_COL_NAME = 'index_type'
     
     # Ind DF
     # for read_data.py, industry_loader(), to update ind name
-    TELECOM_SERV = 'Telecommunication_Services'
-    COM_SERV = 'Communication_Services'
+    TELECOM_SERV = 'Telecommunication_Services' # this replaced
+    COM_SERV = 'Communication_Services'         # by this
     E_COLS_DROP = ['Real_Estate']
     
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -202,22 +214,83 @@ class Display_param:
 
     HIST_COL_NAMES = [*Update_param().HIST_COLUMN_NAMES,
                      Update_param().MARG_COL_NAME,
-                     Update_param().RR_NAME]
+                     Update_param().RR_NAME]\
+                         .remove(Update_param.DATE_NAME)
 
     DATA_COLS_RENAME  = {'op_margin': 'margin',
                          'real_int_rate': 'real_rate'}
+    
+    PAGE0_UP_SUBTITLE = ' \nProjections of Operating EPS'
+    PAGE0_LW_SUBTITLE = ' \nProjections of Reported EPS'
+    
+    PAGE0_UP_Y_LABEL = '\nearnings per share\n'
+    PAGE0_UP_X_LABEL = '\ndate of projection\n'
+    PAGE0_DN_Y_LABEL = '\nearnings per share\n'
+    PAGE0_DN_X_LABEL = '\ndate of projection\n'
+    PAGE0_ACTUAL_TAG = 'actual'
+    PAGE0_UP_Y_LIMIT = (100, None)
+    PAGE0_DN_Y_LIMIT = (75, None)
+    
+    PAGE1_UP_SUBTITLE = 'Ratio: Price to 12-month Trailing Operating Earnings'
+    PAGE1_DN_SUBTITLE = 'Ratio: Price to 12-month Trailing Reported Earnings'
+    
+    PAGE1_DENOM = 'divided by projected earnings'
+    PAGE1_LEGEND1 = f'price (constant after '
+    PAGE1_LEGEND2 = f'price (increases {ROG_AR}% ar after '
+    PAGE1_HISTORICAL_TAG = 'historical'
+    PAGE1_UP_Y_LABEL = ' \n'
+    PAGE1_DN_Y_LABEL = ' \n'
+    PAGE1_UP_X_LABEL = ' \n'
+    PAGE1_DN_X_LABEL = ' \n'
+    PAGE1_UP_Y_LIMIT = (None, None)
+    PAGE1_DN_Y_LIMIT = (None, None)
+    
+    PAGE2_TP_SUBTITLE = 'Margin: quarterly operating earnings relative to revenue'
+    PAGE2_MD_SUBTITLE = 'Quality of Earnings: ratio of 12-month reported to operating earnings'
+    PAGE2_BM_SUBTITLE = 'Equity Premium: \nratio of 12-month trailing reported earnings to price, less 10-year TIPS rate'
+    PAGE2_DISP_MARGIN = 'margin'
+    
+    PAGE2_TP_Y_LABEL = ' \npercent\n '
+    PAGE2_TP_X_LABEL = ' \n '
+    PAGE2_MD_Y_LABEL = ' \npercent\n '
+    PAGE2_MD_X_LABEL = ' \n '
+    PAGE2_BM_Y_LABEL = ' \npercent\n '
+    PAGE2_BM_X_LABEL = ' \n '
+    
+    PAGE2_TP_Y_LIMIT = (None, None)
+    PAGE2_MD_Y_LIMIT = (None, None)
+    PAGE2_BM_Y_LIMIT = (None, None)
+    
+    PAGE2_TP_HORZ_LINES = [10.0]
+    PAGE2_MD_HORZ_LINES = [80, 90]
+    PAGE2_BM_HORZ_LINES = [2.0, 4.0]
+    
+    PAGE3_UP_SUBTITLE = 'Operating Earnings: projected over next 4 quarters'
+    PAGE3_DN_SUBTITLE = 'Reported Earnings: projected over next 4 quarters'
+    
+    PAGE3_Y_LABEL = ' \npercent\n '
+    PAGE3_X_LABEL = '\nquarter of projection, price, and TIPS rate\n\n'
+    
+    PAGE3_UP_Y_LIMIT = (None, 9)
+    PAGE3_DN_Y_LIMIT = (None, 9)
+    
+    PAGE3_UP_HORZ_LINES = [2.0, 4.0]
+    PAGE3_DN_HORZ_LINES = [2.0, 4.0]  
     
     
 @dataclass(frozen= True, slots= True)
 class Display_ind_param:
     # main titles for displays
-    PAGE4_SUPTITLE = "\nOperating Price-Earnings Ratios for " +\
+    PAGE4_SUPTITLE = "\n\nOperating Price-Earnings Ratios for " +\
         "the Industries Within the S&P 500"
+    PAGE4_X_LABL = 'end of year'
+    PAGE4_Y_LABEL = ' \nprice-earnings ratio'
+        
     PAGE5_SUPTITLE = \
-        "\nCorrelations among Annual Price-Earnings Ratios \nfor " +\
+        "\n\nCorrelations among Annual Price-Earnings Ratios \nfor " +\
         "the Industries Within the S&P 500"
     PAGE6_SUPTITLE = \
-        "\nEach Industry's Share of Total Earnings for the Industries in the S&P 500"
+        "\n\nEach Industry's Share of Total Earnings for the Industries in the S&P 500"
 
     # str: source footnotes for displays
     E_DATA_SOURCE = \
@@ -232,7 +305,11 @@ class Display_ind_param:
         "differently than earnings for the industries.\n" +\
         "The index of earnings for the S&P 500 usually is more than twice the sum of " +\
         "earnings for the industries. The S&P 500's P/E is not the " +\
-        "average of the industries' P/Es.\n "
+        "average of the industries' P/Es.\n\n "
     PAGE5_SOURCE = '\n' + E_DATA_SOURCE
-
-    XLABL = 'end of year'
+    
+    PAGE4_Y_MIN = -50
+    PAGE4_Y_MAX = 60
+    
+    PAGE6_X_LABEL = ' \n'
+    

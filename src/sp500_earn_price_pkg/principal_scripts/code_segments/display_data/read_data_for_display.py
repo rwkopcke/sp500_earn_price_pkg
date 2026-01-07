@@ -23,8 +23,7 @@ def history(record_dict):
     if env.OUTPUT_HIST_ADDR.exists():
         with env.OUTPUT_HIST_ADDR.open('r') as f:
             data_df = pl.read_parquet(source= f,
-                                      columns= disp.HIST_COL_NAMES)\
-                        .drop(pl.col(param.DATE_NAME))
+                                      columns= disp.HIST_COL_NAMES)
         hp.message([
             f'Read data history from: \n{env.OUTPUT_HIST_ADDR}'
         ])

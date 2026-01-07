@@ -24,6 +24,12 @@ env = config.Fixed_locations
 param = params.Update_param
 disp = params.Display_param
 
+yr_qtr = param.YR_QTR_NAME
+ann_op_eps = param.ANN_OP_EPS
+ann_rep_eps = param.ANN_REP_EPS
+price = param.PRICE_NAME
+r_rate = param.RR_COL_NAME
+
 # https://mateuspestana.github.io/tutorials/pandas_to_polars/
 # https://www.rhosignal.com/posts/polars-pandas-cheatsheet/
 # https://www.rhosignal.com/tags/polars/
@@ -59,7 +65,7 @@ def display():
 
     # proj_dict_keys: the dates for the data (x axis)
     # data in data_df should conform
-    data_df = data_df.filter(pl.col("yr_qtr")
+    data_df = data_df.filter(pl.col(yr_qtr)
                              .is_in(proj_dict_keys_set))
 
     # create graphs
@@ -76,35 +82,33 @@ def display():
 
     # subsets of columns for op eps (top panel)
     # use rows that match keys for proj_dict
-    df = data_df.select(['yr_qtr', '12m_op_eps'])
-    p_dict_columns = ['12m_op_eps', 'yr_qtr']
+    df = data_df.select([yr_qtr, 
+                         ann_op_eps])
+    p_dict_columns = [ann_op_eps, yr_qtr]
     
-    df = dh.page0_df(df, proj_dict, p_dict_columns, '12m_op_eps')\
-                .rename({'12m_op_eps': 'actual'})\
-                .sort(by= 'yr_qtr')
-    
-    xlabl = '\ndate of projection\n'
-    ylabl = '\nearnings per share\n'
+    df = dh.page0_df(df, proj_dict, p_dict_columns, ann_op_eps)\
+                .rename({ann_op_eps: disp.PAGE0_ACTUAL_TAG})\
+                .sort(by= yr_qtr)
     
     pf.plots_page0(ax['operating'], df,
-                title= ' \nProjections of Operating EPS',
-                ylim= (100, None),
-                xlabl= xlabl,
-                ylabl= ylabl)
+                title= disp.PAGE0_UP_SUBTITLE,
+                ylim= disp.PAGE0_UP_Y_LIMIT,
+                xlabl= disp.PAGE0_UP_X_LABEL,
+                ylabl= disp.PAGE0_UP_Y_LABEL)
     
     # subsets of columns for rep eps (bottom panel)
-    df = data_df.select(['yr_qtr', '12m_rep_eps'])
-    p_dict_columns = ['12m_rep_eps', 'yr_qtr']
+    df = data_df.select([yr_qtr, ann_rep_eps])
+    p_dict_columns = [ann_rep_eps, yr_qtr]
     
-    df = dh.page0_df(df, proj_dict, p_dict_columns, '12m_rep_eps')\
-                .rename({'12m_rep_eps': 'actual'})\
-                .sort(by= 'yr_qtr')
+    df = dh.page0_df(df, proj_dict, p_dict_columns, ann_rep_eps)\
+                .rename({ann_rep_eps: disp.PAGE0_ACTUAL_TAG})\
+                .sort(by= yr_qtr)
 
     pf.plots_page0(ax['reported'], df,
-                title= ' \nProjections of Reported EPS',
-                ylim= (75, None),
-                xlabl= xlabl,
-                ylabl= ylabl)
+                title= disp.PAGE0_LW_SUBTITLE,
+                ylim= disp.PAGE0_DN_Y_LIMIT,
+                xlabl= disp.PAGE0_DN_X_LABEL,
+                ylabl= disp.PAGE0_DN_Y_LABEL)
     
     # show the figure
     hp.message([
@@ -138,48 +142,45 @@ def display():
         #       4) rolling 12m E (hist+proj) for proj quarters
     
     # top panel
-    df = data_df.select(['yr_qtr', '12m_op_eps', 'price'])
+    df = data_df.select([yr_qtr, ann_op_eps, price])
                
     p_df = proj_dict[yr_qtr_current_projn]\
-                .select(['yr_qtr', '12m_op_eps'])
+                .select([yr_qtr, ann_op_eps])
     
-    df = dh.page1_df(df, p_df, '12m_op_eps', disp.ROGQ )
+    df = dh.page1_df(df, p_df, ann_op_eps, disp.ROGQ )
     
-    denom = 'divided by projected earnings'
-    legend1 = f'price (constant after {date_this_projn})\n{denom}'
-    legend2 = f'price (increases {disp.ROG_AR}% ar after {date_this_projn})\n{denom}'
+    legend1 = disp.PAGE1_LEGEND1 + f'{date_this_projn})\n{disp.PAGE1_DENOM}'
+    legend2 = disp.PAGE1_LEGEND2 + f'{date_this_projn})\n{disp.PAGE1_DENOM}'
     
-    df = df.rename({'pe': 'historical',
+    # keys are local temp working names dh.page1_df
+    df = df.rename({'pe': disp.PAGE1_HISTORICAL_TAG,
                'fix_proj_p/e': legend1,
                'incr_proj_p/e': legend2})
-    
-    title = 'Ratio: Price to 12-month Trailing Operating Earnings'
    
     pf.plots_page1(ax['operating'], df,
-                    ylim= (None, None),
-                    title= title,
-                    ylabl= ' \n',
-                    xlabl= ' \n')
+                    ylim= disp.PAGE1_UP_Y_LIMIT,
+                    title= disp.PAGE1_UP_SUBTITLE,
+                    ylabl= disp.PAGE1_UP_Y_LABEL,
+                    xlabl= disp.PAGE1_UP_X_LABEL)
 
     # bottom panel
-    df = data_df.select(['yr_qtr', '12m_rep_eps', 'price'])
+    df = data_df.select([yr_qtr, ann_rep_eps, price])
     
     p_df = proj_dict[yr_qtr_current_projn]\
-               .select(['yr_qtr', '12m_rep_eps'])
+               .select([yr_qtr, ann_rep_eps])
     
-    df = dh.page1_df(df, p_df, '12m_rep_eps', disp.ROGQ )
+    df = dh.page1_df(df, p_df, ann_rep_eps, disp.ROGQ )
     
-    df = df.rename({'pe': 'historical',
+    # keys are local temp working names from dh.page1_df
+    df = df.rename({'pe': disp.PAGE1_HISTORICAL_TAG,
                     'fix_proj_p/e': legend1,
                     'incr_proj_p/e': legend2})
     
-    title = 'Ratio: Price to 12-month Trailing Reported Earnings'
-    
     pf.plots_page1(ax['reported'], df,
-                    ylim= (None, None),
-                    title= title,
-                    ylabl= ' \n',
-                    xlabl= ' \n')
+                    ylim= disp.PAGE1_DN_Y_LIMIT,
+                    title= disp.PAGE1_DN_SUBTITLE,
+                    ylabl= disp.PAGE1_DN_Y_LABEL,
+                    xlabl= disp.PAGE1_DN_X_LABEL)
     
     hp.message([
         f'{env.DISPLAY_1_ADDR}'
@@ -205,63 +206,59 @@ def display():
     
     # create the top and bottom graphs for margins and premiums
     # create working df for op margins (top panel)
-
-    df = data_df.rename({'op_margin' : 'margin'})\
-                .select('yr_qtr', 'margin')\
+    # 'margin' and 'margin100' are local temp working names
+    df = data_df.rename({param.MARG_COL_NAME: 'margin'})\
+                .select(yr_qtr, 'margin')\
                 .with_columns((pl.col('margin') * 100)
                             .alias('margin100'))\
                 .drop('margin')\
-                .rename({'margin100': 'margin'})\
-                .sort(by= 'yr_qtr')
-    
-    title = 'Margin: quarterly operating earnings relative to revenue'
+                .rename({'margin100': disp.PAGE2_DISP_MARGIN})\
+                .sort(by= yr_qtr)
     
     pf.plots_page2(ax['margin'], df,
-                    ylim= (None, None),
-                    title= title,
-                    ylabl= ' \npercent\n ',
-                    xlabl= ' \n ',
-                    hrzntl_vals= [10.0])
+                    ylim= disp.PAGE2_TP_Y_LIMIT,
+                    title= disp.PAGE2_TP_SUBTITLE,
+                    ylabl= disp.PAGE2_TP_Y_LABEL,
+                    xlabl= disp.PAGE2_TP_X_LABEL,
+                    hrzntl_vals= disp.PAGE2_TP_HORZ_LINES)
     
     # create working df for ratio: reported / operating E
-    df = data_df.rename({'12m_rep_eps': 'reported',
-                         '12m_op_eps': 'operating'})\
-                .select('yr_qtr', 'reported', 'operating')\
+    # 'quality', 'reported', 'operating' are local temp working names
+    df = data_df.rename({ann_rep_eps: 'reported',
+                         ann_op_eps: 'operating'})\
+                .select(yr_qtr, 'reported', 'operating')\
                 .with_columns((pl.col('reported') / 
                                pl.col('operating') * 100)
                               .cast(pl.Int8)
                               .alias('quality'))\
                 .drop('reported', 'operating')\
-                .sort(by= 'yr_qtr')
-    title = 'Quality of Earnings: ratio of 12-month reported to operating earnings'
+                .sort(by= yr_qtr)
     
     pf.plots_page2(ax['quality'], df,
-                    ylim= (None, None),
-                    title= title,
-                    ylabl= ' \npercent\n ',
-                    xlabl= ' \n ',
-                    hrzntl_vals= [80, 90])
+                    ylim= disp.PAGE2_MD_Y_LIMIT,
+                    title= disp.PAGE2_MD_SUBTITLE,
+                    ylabl= disp.PAGE2_MD_Y_LABEL,
+                    xlabl= disp.PAGE2_MD_X_LABEL,
+                    hrzntl_vals= disp.PAGE2_MD_HORZ_LINES)
 
     # create working df for premia (bottom panel)
-    df = data_df.rename({'real_int_rate' : 'real_rate'})\
-                .select('yr_qtr', '12m_rep_eps', 
-                        'real_rate', 'price')\
-                .with_columns(((pl.col('12m_rep_eps') /
-                                pl.col('price')) * 100 -
+    # 'real_rate', 'premium' are local temp working names
+    df = data_df.rename({r_rate : 'real_rate'})\
+                .select(yr_qtr, ann_rep_eps, 
+                        'real_rate', price)\
+                .with_columns(((pl.col(ann_rep_eps) /
+                                pl.col(price)) * 100 -
                                 pl.col('real_rate'))
                             .alias('premium'))\
-                .drop('12m_rep_eps', 'real_rate', 'price')\
-                .sort(by= 'yr_qtr')
-
-    title = 'Equity Premium: \nratio of 12-month trailing reported earnings to price, '
-    title += 'less 10-year TIPS rate'
+                .drop(ann_rep_eps, 'real_rate', price)\
+                .sort(by= yr_qtr)
 
     pf.plots_page2(ax['premium'], df,
-                    ylim= (None, None),
-                    title= title,
-                    ylabl= ' \npercent\n ',
-                    xlabl= ' \n ',
-                    hrzntl_vals= [2.0, 4.0])
+                    ylim= disp.PAGE2_BM_Y_LIMIT,
+                    title= disp.PAGE2_BM_SUBTITLE,
+                    ylabl= disp.PAGE2_BM_Y_LABEL,
+                    xlabl= disp.PAGE2_BM_X_LABEL,
+                    hrzntl_vals= disp.PAGE2_BM_HORZ_LINES)
     
     hp.message([
         f'{env.DISPLAY_2_ADDR}'
@@ -285,50 +282,43 @@ def display():
         fontweight='bold')
     fig.supxlabel(disp.PAGE3_SOURCE, fontsize= 8)
     
-    xlabl = '\nquarter of projection, price, and TIPS rate\n\n'
-    ylabl = ' \npercent\n '
-    
     # create the top and bottom graphs for premiums
 
     # create working df for op premium (top panel)
     # add a col: proj eps over the next 4 qtrs
-    df = data_df.select('yr_qtr', 'price', 'real_int_rate',
-                        'op_eps')
+    # 'fwd ...' and '.../...' ratios are local temp working names
+    df = data_df.select(yr_qtr, price, r_rate,
+                        param.OP_EPS)
     df = dh.contemp_12m_fwd_proj(data_df, proj_dict,
-                                 'op_eps', 'fwd_12mproj_op_eps')
+                                 param.OP_EPS, 'fwd_12mproj_op_eps')
     
     df = dh.page3_df(df, 'fwd_12mproj_op_eps')
-    
     df = df.rename({'earnings / price': 'projected earnings / price'})
-    
-    title = 'Operating Earnings: projected over next 4 quarters'
 
     pf.plots_page3(ax['operating'], df,
-                ylim= (None, 9),
-                title= title,
-                ylabl= ylabl,
-                xlabl= xlabl,
-                hrzntl_vals= [2.0, 4.0])
+                ylim= disp.PAGE3_UP_Y_LIMIT,
+                title= disp.PAGE3_UP_SUBTITLE,
+                ylabl= disp.PAGE3_Y_LABEL,
+                xlabl= disp.PAGE3_X_LABEL,
+                hrzntl_vals= disp.PAGE3_UP_HORZ_LINES)
     
     # bottom panel
-    df = data_df.select('yr_qtr', 'price', 'real_int_rate',
-                        'rep_eps')
+    df = data_df.select(yr_qtr, price, r_rate,
+                        param.REP_EPS)
     
     # add a col : proj eps over the next 4 qtrs
     df = dh.contemp_12m_fwd_proj(data_df, proj_dict,
-                                 'rep_eps', 'fwd_12mproj_rep_eps')
+                                 param.REP_EPS, 'fwd_12mproj_rep_eps')
     df = dh.page3_df(df, 'fwd_12mproj_rep_eps')
     
     df = df.rename({'earnings / price': 'projected earnings / price'})
-    
-    title = 'Reported Earnings: projected over next 4 quarters'
 
     pf.plots_page3(ax['reported'], df,
-                ylim= (None, 9),
-                title= title,
-                ylabl= ylabl,
-                xlabl= xlabl,
-                hrzntl_vals= [2.0, 4.0])
+                ylim= disp.PAGE3_DN_Y_LIMIT,
+                title= disp.PAGE3_DN_SUBTITLE,
+                ylabl= disp.PAGE3_Y_LABEL,
+                xlabl= disp.PAGE3_X_LABEL,
+                hrzntl_vals= disp.PAGE3_DN_HORZ_LINES)
     
     hp.message([
         f'{env.DISPLAY_3_ADDR}'

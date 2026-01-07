@@ -1,5 +1,4 @@
 import polars as pl
-import polars.selectors as cs
 import matplotlib.pyplot as plt
 import seaborn as sn
 import numpy as np
@@ -24,6 +23,17 @@ earnings_type = param.E_TYPE_COL_NAME
 def display_ind():
     ind_df = read_ind_for_display.read()
     
+    # remove '_' from industry names
+    revise_ind_names = [
+        name.replace("_", " ")
+        if name not in [param.E_METRIC_COL_NAME, 
+                        param.E_TYPE_COL_NAME,
+                        param.RR_NAME]
+        else name
+        for name in ind_df.columns
+    ]
+    ind_df.columns = revise_ind_names
+    
 # SEABORN SCATTERPLOTS WITH JITTER +++++++++++++++++++++++++++++++++
 # https://matplotlib.org/stable/users/explain/axes/constrainedlayout_guide.html#sphx-glr-users-explain-axes-constrainedlayout-guide-py
 # https://matplotlib.org/stable/users/explain/axes/tight_layout_guide.html#sphx-glr-users-explain-axes-tight-layout-guide-py
@@ -37,11 +47,8 @@ def display_ind():
                .drop(pl.col(earnings_metric),
                      pl.col(earnings_type),
                      pl.col(param.RR_NAME),
-                     pl.col(param.IDX_E_COL_NAME))
-    # simplify col headings
-    df.columns = [name.replace("_", " ")
-                  for name in df.columns]
-    df = df.unpivot(index= year,
+                     pl.col(param.IDX_E_COL_NAME))\
+               .unpivot(index= year,
                     variable_name= 'name',
                     value_name= 'value')
     
@@ -50,10 +57,10 @@ def display_ind():
     # plt.tight_layout(pad= 0.5)
     
     fig.suptitle(
-        '\n' + disp.PAGE4_SUPTITLE,
+        disp.PAGE4_SUPTITLE,
         fontsize=13,
         fontweight='bold')
-    fig.supxlabel(f'{disp.PAGE4_SOURCE}\n ', fontsize= 8)
+    fig.supxlabel(disp.PAGE4_SOURCE, fontsize= 8)
     
     ax = fig.subplots()
     
@@ -76,9 +83,9 @@ def display_ind():
                    marker="|", s=4, linewidth=25
 )
     plt.xticks(rotation = 30)
-    ax.set_ylim(ymin= -50, ymax= 60)
-    ax.set_xlabel(disp.XLABL, fontweight= 'bold')
-    ax.set_ylabel(' \nprice-earnings ratio', fontweight= 'bold')
+    ax.set_ylim(ymin= disp.PAGE4_Y_MIN, ymax= disp.PAGE4_Y_MAX)
+    ax.set_xlabel(disp.PAGE4_X_LABL, fontweight= 'bold')
+    ax.set_ylabel(disp.PAGE4_Y_LABEL, fontweight= 'bold')
     sn.move_legend(ax, 'lower left')
     box = ax.get_position()
     ax.set_position([box.x0, box.y0 + 0.06, 
@@ -112,9 +119,8 @@ def display_ind():
                .drop(pl.col(earnings_metric),
                      pl.col(earnings_type),
                      pl.col(year))
-    # simplify col headings
-    df.columns = [name.replace("_", " ")
-                  for name in df.columns]
+    
+    
     pdf = df.to_pandas()
     pdf.rename(columns={param.IDX_E_COL_NAME: param.SP500}, inplace=True)
     
@@ -136,7 +142,7 @@ def display_ind():
     cg.figure.subplots_adjust(top=0.87)
     
     cg.figure.suptitle(
-        f' \n{disp.PAGE5_SUPTITLE}',
+        disp.PAGE5_SUPTITLE,
         fontsize=13,
         fontweight='bold')
     # plt.tight_layout(pad= 0.5)
@@ -206,7 +212,7 @@ def display_ind():
     # one plot
     ax = fig.subplots()
     fig.suptitle(
-        '\n' + disp.PAGE6_SUPTITLE,
+        disp.PAGE6_SUPTITLE,
         fontsize= 13,
         fontweight= 'bold')
     fig.supxlabel(disp.PAGE4_SOURCE, fontsize= 8)
@@ -220,10 +226,6 @@ def display_ind():
                      pl.col(param.IDX_E_COL_NAME))
     yr_series = pl.Series(df.select(year)).to_list()
     df = df.drop(pl.col(year))
-    # simplify col headings
-    ind_names = [name.replace("_", " ")
-                 for name in df.columns]
-    df.columns = ind_names
     
     # prepare data, remove negative E
     mat_np = df.to_numpy()
@@ -231,7 +233,7 @@ def display_ind():
     
     # sort ind_name and ind_size together by ind_size
     ind_size = mat_np.sum(axis=0).tolist()
-    iterate = sorted(list(zip(ind_names, ind_size)),
+    iterate = sorted(list(zip(df.columns, ind_size)),
                      key= lambda x: x[1],
                      reverse= True)
     ind_names_sorted = [x[0] for x in iterate]
@@ -258,7 +260,7 @@ def display_ind():
         
     #ax.legend(loc="lower center", reverse= True)
     plt.xticks(rotation = 30)
-    ax.set_ylabel(' \n')
+    ax.set_ylabel(disp.PAGE6_X_LABEL)
     box = ax.get_position()
     ax.set_position([box.x0, box.y0 + 0.04, 
                      box.width * 0.75, box.height * 0.95])
