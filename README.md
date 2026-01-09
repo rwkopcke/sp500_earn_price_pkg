@@ -248,12 +248,9 @@ sp500-earn-price-pkg v2.0.0
     - after reinitialization, reset INPUT_DIR 
 
 
-#### Future improvements
-- Make idempotent: write no files unless execution finishes successfully
+#### Future improvements\
 - Tidy the logic/code in the scripts, incl separating functions in code
-    - validate input files
-    - check for new data
-    - add 1-yr cm TIPS rate
+- Add 1-yr cm TIPS rate
     - add new page of equity premiums using 1-yr TIPS & projected E/P
 - Convert the data structure from polars dataframes to duckdb
     - do not reload existing data from db

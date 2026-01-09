@@ -71,7 +71,7 @@ def update():
         hp.message([
             'no valid input files, see messages above'
             ])
-        return
+        return  #back to entry.py
     
     # not sorted
     sp_input_files_set = \
@@ -93,7 +93,8 @@ def update():
             'No new input files',
             'Stop Update and return to menu of actions'
         ])
-        return
+        write.restore_temp_files(exit= False)
+        return  #back to entry.py
 
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++              
 ## +++++  update historical aggregate data  +++++++++++++++++++++++++++++++++
@@ -261,12 +262,14 @@ def update():
     ])
     
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## +++++ write results & archive s&pinput files  +++++++++++++++++++++++++++
+## +++++ write dfs to parquet, record to json, temp files to backups +++++++
+## ++++++++++ archive s&pinput files  +++++++++++++++++++++++++++++++++++++
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     write.history(actual_df)
     write.industry(ind_df)
-    write.projection(proj_dict, new_files_set)
+    write.projection(proj_dict)
+    write.archive_sp_input_xlsx(new_files_set)
     write.record(record_dict)
     
     return

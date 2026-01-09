@@ -23,17 +23,6 @@ earnings_type = param.E_TYPE_COL_NAME
 def display_ind():
     ind_df = read_ind_for_display.read()
     
-    # remove '_' from industry names
-    revise_ind_names = [
-        name.replace("_", " ")
-        if name not in [param.E_METRIC_COL_NAME, 
-                        param.E_TYPE_COL_NAME,
-                        param.RR_NAME]
-        else name
-        for name in ind_df.columns
-    ]
-    ind_df.columns = revise_ind_names
-    
 # SEABORN SCATTERPLOTS WITH JITTER +++++++++++++++++++++++++++++++++
 # https://matplotlib.org/stable/users/explain/axes/constrainedlayout_guide.html#sphx-glr-users-explain-axes-constrainedlayout-guide-py
 # https://matplotlib.org/stable/users/explain/axes/tight_layout_guide.html#sphx-glr-users-explain-axes-tight-layout-guide-py
@@ -119,7 +108,6 @@ def display_ind():
                .drop(pl.col(earnings_metric),
                      pl.col(earnings_type),
                      pl.col(year))
-    
     
     pdf = df.to_pandas()
     pdf.rename(columns={param.IDX_E_COL_NAME: param.SP500}, inplace=True)

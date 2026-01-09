@@ -105,16 +105,16 @@ def display():
                 .sort(by= yr_qtr)
 
     pf.plots_page0(ax['reported'], df,
-                title= disp.PAGE0_LW_SUBTITLE,
+                title= disp.PAGE0_DN_SUBTITLE,
                 ylim= disp.PAGE0_DN_Y_LIMIT,
                 xlabl= disp.PAGE0_DN_X_LABEL,
                 ylabl= disp.PAGE0_DN_Y_LABEL)
     
+    fig.savefig(str(env.DISPLAY_0_ADDR), format= "pdf")
     # show the figure
     hp.message([
         f'{env.DISPLAY_0_ADDR}'
     ])
-    fig.savefig(str(env.DISPLAY_0_ADDR))
     
 # page one  ======================
 # shows:  historical 12m trailing pe plus
@@ -128,7 +128,7 @@ def display():
                              ['reported']])
     fig.suptitle(
         f'{disp.PAGE1_SUPTITLE}\n{date_this_projn}\n ',
-        fontsize=13,
+        fontsize= 13,
         fontweight='bold')
     fig.supxlabel(disp.PAGE1_SOURCE, fontsize= 8)
     
@@ -182,10 +182,10 @@ def display():
                     ylabl= disp.PAGE1_DN_Y_LABEL,
                     xlabl= disp.PAGE1_DN_X_LABEL)
     
+    fig.savefig(str(env.DISPLAY_1_ADDR), format= "pdf")
     hp.message([
         f'{env.DISPLAY_1_ADDR}'
     ])
-    fig.savefig(str(env.DISPLAY_1_ADDR))
     
 # page two  ======================
 # shows:  historical data for margins and 
@@ -260,6 +260,8 @@ def display():
                     xlabl= disp.PAGE2_BM_X_LABEL,
                     hrzntl_vals= disp.PAGE2_BM_HORZ_LINES)
     
+    fig.savefig(str(env.DISPLAY_2_ADDR), format= "pdf")
+    #plt.savefig(f'{output_dir}/eps_page2.pdf', bbox_inches='tight')
     hp.message([
         f'{env.DISPLAY_2_ADDR}'
     ])
@@ -320,10 +322,9 @@ def display():
                 xlabl= disp.PAGE3_X_LABEL,
                 hrzntl_vals= disp.PAGE3_DN_HORZ_LINES)
     
+    fig.savefig(str(env.DISPLAY_3_ADDR), format= "pdf")
     hp.message([
         f'{env.DISPLAY_3_ADDR}'
     ])
-    fig.savefig(str(env.DISPLAY_3_ADDR))
-    #plt.savefig(f'{output_dir}/eps_page3.pdf', bbox_inches='tight')
     
     return

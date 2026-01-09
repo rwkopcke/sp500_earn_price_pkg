@@ -1,7 +1,7 @@
 {
     "sources": {
-        "s&p": "https:/www.spglobal.com/spdji/en/search/?query=index+earnings&activeTab=all",
-        "tips": "https:/fred.stlouisfed.org/series/DFII10"
+        "s&p": "https://www.spglobal.com/spdji/en/search/?query=index+earnings&activeTab=all",
+        "tips": "https://fred.stlouisfed.org/series/DFII10"
     },
     "latest_file": "sp-eps 2025-12-31.xlsx",
     "prev_used_files": [
@@ -21,7 +21,7 @@
         "sp-eps 2022-09-30.xlsx",
         "sp-eps 2022-06-30.xlsx",
         "sp-eps 2022-03-24.xlsx",
-        "sp-eps 2021-12-31.xlsx",
+        "sp-eps 2021-12-23.xlsx",
         "sp-eps 2021-08-31.xlsx",
         "sp-eps 2021-06-30.xlsx",
         "sp-eps 2021-03-31.xlsx",
@@ -189,7 +189,6 @@
         "sp-eps 2022-01-31.xlsx",
         "sp-eps 2022-01-21.xlsx",
         "sp-eps 2022-01-13.xlsx",
-        "sp-eps 2021-12-23.xlsx",
         "sp-eps 2021-12-16.xlsx",
         "sp-eps 2021-12-08.xlsx",
         "sp-eps 2021-11-26.xlsx",

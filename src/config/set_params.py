@@ -51,12 +51,12 @@ class Update_param:
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #           DF COL NAMES
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    # Actual DF
+# Actual DF and proj DF
     DATE_NAME = 'date'
     YR_QTR_NAME = 'yr_qtr'
     ANNUAL_DATE = 'year'
     PRICE_NAME = 'price'
-    RR_NAME = 'real_int_rate'
+    RR_NAME = 'real interest rate'
     
     OP_EPS = 'op_eps'
     OP_PE = 'op_pe'
@@ -65,24 +65,23 @@ class Update_param:
     ANN_OP_EPS = '12m_' + OP_EPS
     ANN_REP_EPS = '12m_' + REP_EPS
     
-    # names for other qtrly data
+# other qtrly data in actual DF
     DIV_PS = 'div_ps'
     SALES_PS = 'sales_ps'
     BOOK_PS = 'bk_val_ps'
     CAPEX_PS = 'capex_ps'
     DIVISOR = 'divisor'
 
-    # Ind DF
+# Ind DF
     IDX_E_COL_NAME = 'index'   # contains E for the index
-    # other cols contain E for the various ind in the index
     E_TYPE_COL_NAME = 'earnings_type'
     E_METRIC_COL_NAME = 'earnings_metric'
     IDX_TYPE_COL_NAME = 'index_type'
-    
-    # Ind DF
+    # other cols take ind names from the sp xlsx
+    # sp can change industry names over time
     # for read_data.py, industry_loader(), to update ind name
-    TELECOM_SERV = 'Telecommunication_Services' # this replaced
-    COM_SERV = 'Communication_Services'         # by this
+    TELECOM_SERV = 'Telecommunication Services' # this replaced
+    COM_SERV = 'Communication Services'         # by this
     E_COLS_DROP = ['Real_Estate']
     
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -221,7 +220,7 @@ class Display_param:
                          'real_int_rate': 'real_rate'}
     
     PAGE0_UP_SUBTITLE = ' \nProjections of Operating EPS'
-    PAGE0_LW_SUBTITLE = ' \nProjections of Reported EPS'
+    PAGE0_DN_SUBTITLE = ' \nProjections of Reported EPS'
     
     PAGE0_UP_Y_LABEL = '\nearnings per share\n'
     PAGE0_UP_X_LABEL = '\ndate of projection\n'

@@ -5,17 +5,15 @@
    access these values in other modules by
         import sp500_pe.read_data_func as rd
 '''
-import sys
-from datetime import datetime
-
 from openpyxl import load_workbook
 import openpyxl.utils.cell as ut_cell
-from openpyxl.utils import coordinate_to_tuple
 import polars as pl
 import polars.selectors as cs
 
 from sp500_earn_price_pkg.helper_func_module \
     import helper_func as hp
+from sp500_earn_price_pkg.principal_scripts.code_segments.update_data \
+    import write_data_to_files as write
     
 import config.config_paths as config
 import config.set_params as params
@@ -52,7 +50,7 @@ def verify_valid_input_files():
         hp.message([
             f'{input_dir} does not exist'
         ])
-        return {}
+        return set()
     
 # both sp and rr files present?
 # READ: data files in input_dir
@@ -76,7 +74,7 @@ def verify_valid_input_files():
             f'require one TIPS file with name {rr_name}'
         ])
         # set signal: inputs not valid
-        input_sp_files_set = {}
+        input_sp_files_set = set()
     
     return input_sp_files_set
 
@@ -144,7 +142,7 @@ def ensure_consistent_file_names(names_set):
                 f'{input_dir / file}',
                 'inspect file for date'
                 ])
-            sys.exit()
+            write.restore_temp_files()
         
     return output_sp_files_set
 
@@ -168,7 +166,7 @@ def find_wk_sheet(file, sheet_name):
             f'failed to load \n{file}\n{sheet_name}',
             'Check the workbook and sheet, then try again.'
         ])
-        sys.exit()
+        write.restore_temp_files()
 
 
 def xlsx_block_reader(sheet, 
@@ -253,7 +251,6 @@ def key_finder(cell_list, name,
             f'cell_list: {cell_list}',
             f'start pos: {start_pos}',
             f'keys to find: {keys_to_find_list}'])
-        sys.exit()
         
     if not isinstance(cell_list, list):
         send_msg()
@@ -328,7 +325,7 @@ def history_data():
             act_df = pl.read_parquet(f)
         with env.BACKUP_HIST_TEMP_ADDR.open('wb') as f:
             act_df.write_parquet(f)
-        return act_df  #.cast({date: pl.String})
+        return act_df
     else:
         return pl.DataFrame()  
 
@@ -346,6 +343,7 @@ def history_loader(file, min_date):
         sheet is a list of lists,
             a matrix extracted from the sheet
     '''
+    
     sheet = find_wk_sheet(file, param.SHT_EST_NAME)
     
     # fetch list of data, from first col of sheet
@@ -400,7 +398,8 @@ def history_loader(file, min_date):
                 orient= 'row')\
             .select(cs.by_dtype(pl.String, pl.Float64))\
             .cast({cs.float(): pl.Float32})
-    df.columns = param.HIST_COLUMN_NAMES
+    df.columns = [name for name in param.HIST_COLUMN_NAMES
+                  if not (name == yr_qtr)]
     
     '''
             .with_columns(pl.col(date).map_elements(hp.cast_date_to_str,
@@ -474,7 +473,7 @@ def history_loader(file, min_date):
             f'{file} \nmissing date for new entries',
             df[date]
         ])
-        sys.exit()
+        write.restore_temp_files()
 
     return [df, cell_list]
 
@@ -754,13 +753,9 @@ def industry_loader(file, years_to_update_set):
     # additional offset, - 1, because stop key is one row below data block
     stop_row = max_pos
     
-    # remove parentheticals
-    ind = [item.split(' (')[0]
+    # remove parentheticals and 'SP 500' from ind names
+    ind_name = [' '.join(item.split(" (")[0].split(' ')[2:])
            for item in cell_list[min_pos:max_pos]]
-
-    # remove 'S&P x00 ' and replace spaces with '_'
-    ind_name = ['_'.join(item.rstrip().split(' ')[2:])
-                for item in ind]
     
     ind_name = update_col_names(ind_name)
     # set first name
@@ -966,7 +961,10 @@ def proj_loader(file):
                 orient= 'row')\
             .select(cs.by_dtype(pl.String, pl.Float64))\
             .cast({cs.float(): pl.Float32})
-    df.columns = param.PROJ_COLUMN_NAMES
+            
+    df.columns = [name for name in param.PROJ_COLUMN_NAMES
+                  if not (name == yr_qtr)]
+    
     df = df.with_columns(pl.col(date).map_batches(
                 hp.date_to_year_qtr, 
                 return_dtype= pl.String)

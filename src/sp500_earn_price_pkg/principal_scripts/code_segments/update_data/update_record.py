@@ -31,12 +31,12 @@ def fetch():
         with open(env.RECORD_DICT_ADDR,'r') as f:
             record_dict = json.load(f)
             
-# WRITE: if prev record_dict exists, write temp backup
-        with open(env.BACKUP_RECORD_DICT_ADDR, 'w') as f:
+# WRITE: temp -- to restore state if necessary
+        with open(env.BACKUP_RECORD_TEMP_ADDR, 'w') as f:
             json.dump(record_dict, f, indent= 4)
         hp.message([
             f'Read record_dict from: \n{env.RECORD_DICT_ADDR}',
-            f'Wrote record_dict to: \n{env.BACKUP_RECORD_DICT_ADDR}'
+            f'Wrote temp record_dict at: \n{env.BACKUP_RECORD_TEMP_ADDR}'
         ])
         
     else:
@@ -66,6 +66,7 @@ def record_dict(record_dict, input_files_set):
     '''
     def at_least_1_qtr_before_update_set(date_1, date_2):
         '''
+            Returns bool
             True if date_1 is at least 3 months before date_2
         '''
         if date_1 >= date_2:
