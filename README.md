@@ -1,6 +1,6 @@
 # S&P500 earnings yield and 10-year TIPS rate
 #### initiated:  2023 08
-#### current version:  2025 12
+#### current version:  2026 01
 ### Uses current and historical data
 - index of stock prices for the S&P500
 - operating and reported earnings for the S&P500
@@ -8,8 +8,11 @@
 - interest rate on 10-year TIPS (constant maturity)
 - operating margins for the S&P500
 - earnings and prices for the S&P's industries
+- earnings and prices for S&P 400, 600, and 1500 indexes
 
 ### update_data.py
+- maintains files containing quarterly data
+- observations are for the last available date in each quarter
 - reads new data from .xlsx workbooks in input_dir/
 - S&P data downloaded from S&P's "weekly" posts
 - TIPS data downloaded from FRED database
@@ -33,6 +36,10 @@
     - page4: distribution of industries' operating P/Es
     - page5: correlation heatmap for industries' operating P/Es
     - page6: distribution of industries' operating earnings
+
+### display_sp_idx_data.py
+- TODO
+- x
 
 ### sources
 - https://www.spglobal.com/spdji/en/search/?query=index+earnings&activeTab=all
@@ -66,9 +73,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 ```
 
-### project file structure
+### Project Structure
 
-#### Dependencies:
+#### Dependencies Tree:
 ```     
 ... /sp500_earn_price_pkg % uv tree
 sp500-earn-price-pkg v2.0.0
@@ -102,20 +109,14 @@ sp500-earn-price-pkg v2.0.0
 ```
 <br>
 
-#### Project File Structure
+#### Project File Tree:
 
 ... /sp500_earn_price_pkg % tree
 ```
 .
-├── dist
-│   ├── sp500_earn_price_pkg-1.0.0-py3-none-any.whl
-│   └── sp500_earn_price_pkg-1.0.0.tar.gz
+├── environment.json
 ├── input_output
 │   ├── backup_dir
-│   │   ├── backup_ind_df.parquet
-│   │   ├── backup_pe_df_actuals.parquet
-│   │   ├── backup_pe_estimates_df.parquet
-│   │   └── backup_record_dict.json
 │   ├── display_dir
 │   │   ├── eps_page0.pdf
 │   │   ├── eps_page1.pdf
@@ -125,8 +126,8 @@ sp500-earn-price-pkg v2.0.0
 │   │   ├── eps_page5.pdf
 │   │   └── eps_page6.pdf
 │   ├── input_dir
-│   │   ├── DFII10.xlsx
-│   │   └── sp-eps 2025-11-05.xlsx
+│   │   └── DFII10.xlsx
+|   |   |__ sp-eps 2025-12-31.xlsx (example sp file)
 │   ├── output_dir
 │   │   ├── sp500_ind_df.parquet
 │   │   ├── sp500_pe_df_actuals.parquet
@@ -135,11 +136,12 @@ sp500-earn-price-pkg v2.0.0
 ├── pyproject.toml
 ├── README.md
 ├── src
+│   ├── config
+│   │   ├── __init__.py
+│   │   ├── config_paths.py
+│   │   └── set_params.py
 │   └── sp500_earn_price_pkg
 │       ├── __init__.py
-│       ├── config
-│       │   ├── config_paths.py
-│       │   └── set_params.py
 │       ├── entry.py
 │       ├── helper_func_module
 │       │   ├── __init__.py
@@ -164,6 +166,7 @@ sp500-earn-price-pkg v2.0.0
 │           │       └── write_data_to_files.py
 │           ├── display_data.py
 │           ├── display_ind_data.py
+│           ├── display_other_sp_indexes.py
 │           └── update_data.py
 └── uv.lock
 
@@ -181,10 +184,16 @@ sp500-earn-price-pkg v2.0.0
 1. Put new .xlsx from S&P into input_dir/    (S&P's id: EPSEST)
     - https://www.spglobal.com/spdji/en/search/?query=index+earnings&activeTab=all
     - rename: sp-500-eps-est YYYY MM DD.xlsx
+    - first three characters of sp input file must be "sp-"
+    - last four characters of sp input file must be ".xlsx" (see tree above)
     
 2. Put new data from FRED into input_dir/  (FRED's id: DFII10)
     - https://fred.stlouisfed.org/series/DFII10/chart
     - In DFII10.xlsx, add real interest rates for dates that match SP's new file dates
+    - Name of FRED file must be "DFII10.xlsx"  (see tree above)
+    - DFII10.xlsx must have 
+        - quarter-end 10-year TIPS rates for full period of sp files
+        - TIPS 10-year rate for the date of most recent sp file
 
 3. From sp500_earn_price_pkg top level: ```uv run earn-price```
 
@@ -209,16 +218,17 @@ sp500-earn-price-pkg v2.0.0
         - reads files in output_dir/
         - reads sp500_ind_df.parquet file in output_dir/
         - writes pdf pages to display_dir/
+    
+    - action 3: TODO
 <br>
 <br>
 
 ## Other Information
 ### sp500_earn_price_pkg/config/config_paths.py
--  Contains absolute address of ARCHIVE_DIR
-    - user must specify location of ARCHIVE_DIR which contains input files after they have been read
+-  Reads absolute address of ARCHIVE_DIR from ```/sp500_earn_price_pkg/environment.json```
+    - user must specify location of ARCHIVE_DIR to store input files after they have been read
 -  Contains addresses for all other files relative to the address of the top-level project file
     - abs addr of top-level sp500_earn_price_pkg/ is the root for addrs of all folders and files (except the ARCHIVE_DIR)
-- uses pathlib's Path()
 
 ### output_dir/
 #### sp-500-eps-est YYYY MM DD.parquet
@@ -232,7 +242,6 @@ sp500-earn-price-pkg v2.0.0
 - records all data files read and written
 - records which files have been used
 - maintains date of latest file read
-- maintains list of quarters covered by data
 <br>
 <br>
 
@@ -249,9 +258,8 @@ sp500-earn-price-pkg v2.0.0
 
 
 #### Future improvements\
-- Tidy the logic/code in the scripts, incl separating functions in code
+- Tidy the logic/code in the scripts
+- Improve docstrings
 - Add 1-yr cm TIPS rate
     - add new page of equity premiums using 1-yr TIPS & projected E/P
-- Convert the data structure from polars dataframes to duckdb
-    - do not reload existing data from db
-    - only insert new rows and tables 
+- Convert the data structure from polars dataframes to duckdb or ... 

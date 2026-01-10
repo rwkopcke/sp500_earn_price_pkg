@@ -44,6 +44,7 @@ def history(actual_df):
     Writes the previous version (from temp) to backup
     '''
     # move any existing hist file in output_dir to backup
+    
     write_data_file(actual_df, env.OUTPUT_HIST_ADDR)
     move_temp_to_backup(env.BACKUP_HIST_TEMP_ADDR, 
                         env.BACKUP_HIST_ADDR)
