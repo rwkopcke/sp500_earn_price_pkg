@@ -9,7 +9,7 @@ from sp500_earn_price_pkg.helper_func_module \
 
 env = config.Fixed_locations
 
-def restore_temp_files(exit= True):
+def restore_from_temp_files(location= "missing", exit= True):
     '''
     Restores original parquet files and record_dict.json
     '''
@@ -24,6 +24,10 @@ def restore_temp_files(exit= True):
                         env.OUTPUT_IND_ADDR,
                         env.OUTPUT_PROJ_ADDR]
                     ):
+        hp.message([
+            f'At {location}:',
+            'Restored original from temporary files, listed below'
+        ])
         if temp.exists():
             temp.rename(orig_file)
             hp.message([

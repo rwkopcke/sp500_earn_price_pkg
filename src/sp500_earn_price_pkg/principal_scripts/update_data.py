@@ -93,7 +93,9 @@ def update():
             'No new input files',
             'Stop Update and return to menu of actions'
         ])
-        write.restore_temp_files(exit= False)
+        write.restore_from_temp_files(location=
+            "update_data.py() update record dict for new files",
+            exit= False)
         return  #back to entry.py
 
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++              

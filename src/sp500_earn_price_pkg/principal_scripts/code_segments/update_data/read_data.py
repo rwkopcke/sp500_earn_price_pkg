@@ -142,7 +142,9 @@ def ensure_consistent_file_names(names_set):
                 f'{input_dir / file}',
                 'inspect file for date'
                 ])
-            write.restore_temp_files()
+            write.restore_from_temp_files(location=
+                "read_data.py: ensure_consistent_file_names()"
+            )
         
     return output_sp_files_set
 
@@ -166,7 +168,9 @@ def find_wk_sheet(file, sheet_name):
             f'failed to load \n{file}\n{sheet_name}',
             'Check the workbook and sheet, then try again.'
         ])
-        write.restore_temp_files()
+        write.restore_from_temp_files(location=
+            "read_data.py: find_wk_sheet()"
+        )
 
 
 def xlsx_block_reader(sheet, 
@@ -323,8 +327,11 @@ def history_data():
     if env.OUTPUT_HIST_ADDR.exists():
         with env.OUTPUT_HIST_ADDR.open('rb') as f:
             act_df = pl.read_parquet(f)
-        with env.BACKUP_HIST_TEMP_ADDR.open('wb') as f:
-            act_df.write_parquet(f)
+        env.OUTPUT_HIST_ADDR.rename(env.BACKUP_HIST_TEMP_ADDR)
+        hp.message([
+            f'Read history data from:\n{env.OUTPUT_HIST_ADDR}'
+            f'Moved history file to:\n{env.BACKUP_HIST_TEMP_ADDR}'
+        ])
         return act_df
     else:
         return pl.DataFrame()  
@@ -473,7 +480,9 @@ def history_loader(file, min_date):
             f'{file} \nmissing date for new entries',
             df[date]
         ])
-        write.restore_temp_files()
+        write.restore_from_temp_files(location=
+            "read_data.py: history_loader()"
+        )
 
     return [df, cell_list]
 
@@ -692,8 +701,11 @@ def industry_data():
     if env.OUTPUT_IND_ADDR.exists():
         with env.OUTPUT_IND_ADDR.open('rb') as f:
             ind_df = pl.read_parquet(f)
-        with env.BACKUP_IND_TEMP_ADDR.open('wb') as f:
-            ind_df.write_parquet(f)
+        env.OUTPUT_IND_ADDR.rename(env.BACKUP_IND_TEMP_ADDR)
+        hp.message([
+            f'Read industry data from:\n{env.OUTPUT_IND_ADDR}'
+            f'Moved industry file to:\n{env.BACKUP_IND_TEMP_ADDR}'
+        ])
         
         col_lst = update_col_names(ind_df.columns)
         ind_df.columns = col_lst
@@ -903,8 +915,13 @@ def projection_data():
     if env.OUTPUT_PROJ_ADDR.exists():
         with env.OUTPUT_PROJ_ADDR.open('rb') as f:
             proj_hist_df = pl.read_parquet(f)
-        with env.BACKUP_PROJ_TEMP_ADDR.open('wb') as f:
-            proj_hist_df.write_parquet(f)
+            
+        env.OUTPUT_PROJ_ADDR.rename(env.BACKUP_PROJ_TEMP_ADDR)
+        hp.message([
+            f'Read estimates data from:\n{env.OUTPUT_PROJ_ADDR}'
+            f'Moved estimates file to:\n{env.BACKUP_PROJ_TEMP_ADDR}'
+        ])
+            
         proj_dict = proj_hist_df.to_dict(as_series= False)
     else:
         proj_dict = dict()
