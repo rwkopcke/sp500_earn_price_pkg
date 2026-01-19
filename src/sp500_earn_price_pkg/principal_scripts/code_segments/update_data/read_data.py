@@ -42,7 +42,6 @@ def verify_valid_input_files():
         If true, returns set of sp files 
         if false, returns empty set
     '''
-    
     input_dir = env.INPUT_DIR
     sp_glob_str = env.INPUT_SP_FILE_GLOB_STR
     
@@ -57,8 +56,6 @@ def verify_valid_input_files():
     input_sp_files_set = \
         set(str(f.name) for f in 
             input_dir.glob(sp_glob_str))
-    rr_file_lst = [str(f.name) for f in 
-                   input_dir.glob(rr_name)]
     
     # if no sp input files
     if not input_sp_files_set:
@@ -68,7 +65,9 @@ def verify_valid_input_files():
         ])
         
     # if no unique rr input file
-    if not (len(rr_file_lst) == 1):
+    if not (len([str(f.name)  
+                 for f in input_dir.glob(rr_name)])
+            == 1):
         hp.message([
             f'no unique {rr_name} in \n{input_dir}',
             f'require one TIPS file with name {rr_name}'
@@ -83,7 +82,7 @@ def ensure_consistent_file_names(names_set):
     '''
     Finds date in each sp input xlsx
         Amends name of input file to:
-            'FILE_OUTPUT_WKBK_PREFIX} {DATE_FMT}.xlsx'
+            '{FILE_OUTPUT_WKBK_PREFIX} {DATE_FMT}.xlsx'
         where the date is taken from the
             SHT_EST_NAME sheet, near the top of WKBK_DATE_COL
         amends the names of sp files in input_dir
@@ -92,11 +91,7 @@ def ensure_consistent_file_names(names_set):
         Return the set of std names, which includes no redundant
             names: date in file name is date of projection; one
             file per projection date.
-        
-    https://www.programiz.com/python-programming/datetime/strftime
-    https://duckduckgo.com/?q=python+string+to+datetime&t=osx&ia=web
     '''
-    
     input_dir = env.INPUT_DIR
     # limit # of rows to read in WKBK_DATE_COL
     max = param.MAX_DATE_ROWS
@@ -104,49 +99,60 @@ def ensure_consistent_file_names(names_set):
     
     output_sp_files_set = set()
     for file in sorted(names_set, reverse= True):
-        path_name = input_dir / file
-        sheet = find_wk_sheet(
-            path_name,
-            param.SHT_EST_NAME)
+        new_file_name = \
+            file_rename_with_date(file, input_dir,
+                                  max, date_col)
         
-        # returns a simple list of vals in date_col
-        first_col_list = \
-            xlsx_block_reader(sheet, 
-                start_row= 1, stop_row= max,
-                first_col_ltr= date_col, 
-                last_col_ltr= date_col,
-                return_simple_list= True)
-        
-        # find file's date for file's name
-        found_date = False
-        for item in first_col_list:
-            if hp.str_is_date(item, param.DATE_FMT):
-                found_date = True
-                new_name_file = \
-                    f'{env.FILE_OUTPUT_WKBK_PREFIX} {item}.xlsx'
-                # rename file, if file is not redundant
-                if new_name_file in output_sp_files_set:
-                    # delete, more recent version already exists
-                    path_name.unlink()
-                else:
-                    # add name to return set, update dir
-                    output_sp_files_set.add(new_name_file)
-                    path_name.rename(input_dir / new_name_file)
-                break
-            
         # traversed first_col_list w/o finding a date
-        if not found_date:
+        # => new_file_name is blank
+        if not (new_file_name == ' '):
+            output_sp_files_set.add(new_file_name) 
+            (env.INPUT_DIR / file)\
+                .rename(env.INPUT_DIR / new_file_name)
+        else:
             hp.message([
                 'ERROR read_data_func.std_names for files',
                 'found no date in first {max} rows of',
                 f'{input_dir / file}',
                 'inspect file for date'
-                ])
-            write.restore_from_temp_files(location=
-                "read_data.py: ensure_consistent_file_names()"
-            )
+            ])
+    
+    # If any files had no dates, reset and quit
+    if len(names_set) > len(output_sp_files_set):
+        # restore parquet and json files if necessary
+        write.restore_data_stop_update(location=
+            "read_data.py: ensure_consistent_file_names()")
         
     return output_sp_files_set
+
+
+def file_rename_with_date(file, input_dir,
+                          max, date_col):
+    '''
+        find date of file,
+        return name of file with date, str
+        if no date found, return ' '
+    '''
+    sheet = find_wk_sheet(
+        input_dir / file,
+        param.SHT_EST_NAME)
+        
+    # returns a simple list of vals in date_col
+    first_col_list = \
+        xlsx_block_reader(sheet, 
+            start_row= 1, stop_row= max,
+            first_col_ltr= date_col, 
+            last_col_ltr= date_col,
+            return_simple_list= True)
+        
+    # find file's date, if none found, return ' '
+    new_name_file = ' '
+    for item in first_col_list:
+        if hp.str_is_date(item, param.DATE_FMT):
+            new_name_file = \
+                f'{env.FILE_OUTPUT_WKBK_PREFIX} {item}.xlsx'
+            break
+    return new_name_file
 
 
 def find_wk_sheet(file, sheet_name):
@@ -165,10 +171,15 @@ def find_wk_sheet(file, sheet_name):
         return workbook[sheet_name]
     except Exception as e:
         hp.message([
+            f'In read_data/find_wk_sheet()',
             f'failed to load \n{file}\n{sheet_name}',
             'Check the workbook and sheet, then try again.'
         ])
-        write.restore_from_temp_files(location=
+        hp.message([
+            f'The error message for this attempt:',
+            f'{e}'
+        ])
+        write.restore_data_stop_update(location=
             "read_data.py: find_wk_sheet()"
         )
 
@@ -327,10 +338,9 @@ def history_data():
     if env.OUTPUT_HIST_ADDR.exists():
         with env.OUTPUT_HIST_ADDR.open('rb') as f:
             act_df = pl.read_parquet(f)
-        env.OUTPUT_HIST_ADDR.rename(env.BACKUP_HIST_TEMP_ADDR)
         hp.message([
+            f'In read_data/history_data()',
             f'Read history data from:\n{env.OUTPUT_HIST_ADDR}'
-            f'Moved history file to:\n{env.BACKUP_HIST_TEMP_ADDR}'
         ])
         return act_df
     else:
@@ -480,7 +490,7 @@ def history_loader(file, min_date):
             f'{file} \nmissing date for new entries',
             df[date]
         ])
-        write.restore_from_temp_files(location=
+        write.restore_data_stop_update(location=
             "read_data.py: history_loader()"
         )
 
@@ -701,10 +711,8 @@ def industry_data():
     if env.OUTPUT_IND_ADDR.exists():
         with env.OUTPUT_IND_ADDR.open('rb') as f:
             ind_df = pl.read_parquet(f)
-        env.OUTPUT_IND_ADDR.rename(env.BACKUP_IND_TEMP_ADDR)
         hp.message([
             f'Read industry data from:\n{env.OUTPUT_IND_ADDR}'
-            f'Moved industry file to:\n{env.BACKUP_IND_TEMP_ADDR}'
         ])
         
         col_lst = update_col_names(ind_df.columns)
@@ -916,13 +924,12 @@ def projection_data():
         with env.OUTPUT_PROJ_ADDR.open('rb') as f:
             proj_hist_df = pl.read_parquet(f)
             
-        env.OUTPUT_PROJ_ADDR.rename(env.BACKUP_PROJ_TEMP_ADDR)
         hp.message([
             f'Read estimates data from:\n{env.OUTPUT_PROJ_ADDR}'
-            f'Moved estimates file to:\n{env.BACKUP_PROJ_TEMP_ADDR}'
         ])
             
         proj_dict = proj_hist_df.to_dict(as_series= False)
+        
     else:
         proj_dict = dict()
     

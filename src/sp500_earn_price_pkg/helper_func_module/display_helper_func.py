@@ -55,7 +55,7 @@ def page0_df(df, p_dict, p_dict_columns, name_act):
     '''
     
     # create hf with 2cols 
-    #   yr_qtr and actual 12m eps
+    #   yr_qtr and actual 12m eps -- name_act
     #   which appears only in the 4th qtr, otherwise null
     hf = df.select(pl.col(name_act),
                    pl.col(yr_qtr))\
@@ -68,6 +68,7 @@ def page0_df(df, p_dict, p_dict_columns, name_act):
                       coalesce= True)\
                 .select(pl.col(name_act),
                         pl.col(yr_qtr))
+
 
     # for each yr_qtr in df (hf), fetch its proj_df from p_dict
     # filter to select 12m proj for future Q4s
@@ -111,7 +112,7 @@ def page0_df(df, p_dict, p_dict_columns, name_act):
     # pivot years into column names for each yr_qtr
     p_df = p_df.pivot(index= yr_qtr,
                       columns= 'year')\
-               .sort(by= yr_qtr)\
+               .sort(by= yr_qtr)
     
     # build DF with data to plot
     p_df = hf.select([yr_qtr, 

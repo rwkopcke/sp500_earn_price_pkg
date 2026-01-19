@@ -9,31 +9,50 @@ from sp500_earn_price_pkg.helper_func_module \
 
 env = config.Fixed_locations
 
-def restore_from_temp_files(location= "missing", exit= True):
+input_dir = env.INPUT_DIR
+sp_glob_str = env.INPUT_SP_FILE_GLOB_STR
+
+
+def restore_data_stop_update(location= "missing", 
+                               exit= True):
     '''
     Restores original parquet files and record_dict.json
+        .rename() removes TEMP files
+    If exit= True, halt
+    Otherwise return to processing
     '''
-    for temp, orig_file in zip([
-                        env.BACKUP_RECORD_TEMP_ADDR,
-                        env.BACKUP_HIST_TEMP_ADDR,
-                        env.BACKUP_IND_TEMP_ADDR,
-                        env.BACKUP_PROJ_TEMP_ADDR], 
-                                        [
-                        env.RECORD_DICT_ADDR,
-                        env.OUTPUT_HIST_ADDR,
-                        env.OUTPUT_IND_ADDR,
-                        env.OUTPUT_PROJ_ADDR]
-                    ):
-        hp.message([
-            f'At {location}:',
-            'Restored original from temporary files, listed below'
+    hp.message([
+            f'At:\n{location} stopped update'
         ])
-        if temp.exists():
-            temp.rename(orig_file)
-            hp.message([
-                f'Restored: \n{orig_file}',
-                f'From: \n{temp}'
-            ])
+    if not env.BACKUP_TEMP_DIR.exists():
+        hp.message([
+            'No data files restored because'
+            'No temporary directory exists'
+        ])
+    
+    else:
+        for file in env.BACKUP_TEMP_DIR.iterdir():
+            match str(file.name):
+                case env.BACKUP_HIST_TEMP:
+                    move_file_from_to(
+                        env.BACKUP_HIST_TEMP_ADDR,
+                        env.OUTPUT_HIST_ADDR
+                    )
+                case env.BACKUP_IND_TEMP:
+                    move_file_from_to(
+                        env.BACKUP_IND_TEMP_ADDR,
+                        env.OUTPUT_IND_ADDR
+                    )
+                case env.BACKUP_PROJ_TEMP:
+                    move_file_from_to(
+                        env.BACKUP_PROJ_TEMP_ADDR,
+                        env.OUTPUT_PROJ_ADDR
+                    )
+                case env.BACKUP_RECORD_TEMP:
+                    move_file_from_to(
+                        env.BACKUP_RECORD_TEMP_ADDR,
+                        env.RECORD_DICT_ADDR
+                    )
     if exit:
         hp.message([
             f'Processing halted'
@@ -44,38 +63,34 @@ def restore_from_temp_files(location= "missing", exit= True):
 
 def history(actual_df):
     '''
-    Writes updated actual_df to parquet file
-    Writes the previous version (from temp) to backup
+        Writes updated actual_df to parquet file
+        Writes the previous version to temp
     '''
     # move any existing hist file in output_dir to backup
-    
+    if env.OUTPUT_HIST_ADDR.exists():
+        move_file_from_to(env.OUTPUT_HIST_ADDR,
+                          env.BACKUP_HIST_TEMP_ADDR)
     write_data_file(actual_df, env.OUTPUT_HIST_ADDR)
-    move_temp_to_backup(env.BACKUP_HIST_TEMP_ADDR, 
-                        env.BACKUP_HIST_ADDR)
     return
 
 
 def industry(ind_df):
     '''
-    Writes updated ind_df to parquet file
-    Writes the previous version (from temp) to backup
+        Writes updated ind_df to parquet file
+        Writes the previous version to temp
     '''
+    if env.OUTPUT_IND_ADDR.exists():
+        move_file_from_to(env.OUTPUT_IND_ADDR,
+                      env.BACKUP_IND_TEMP_ADDR)
     write_data_file(ind_df, env.OUTPUT_IND_ADDR)
-    move_temp_to_backup(env.BACKUP_IND_TEMP_ADDR, 
-                        env.BACKUP_IND_ADDR)
     return
 
 
 def projection(proj_dict):
-    '''
-        proj_dict: keys, year_quarter of projection
-        config.Fixed_locations: provides the address for storing the data
-        
-        Writes the projection data for each year_quarter
-        to a single parquet file. 
+    ''' 
         proj_dict
-            keys are year_quarters
-            values are df with projections for future qtrs
+            key, year_quarter
+            value, df with projections for future qtrs
         proj_df is the format for saving proj_dict
             cols = proj_df keys
             rows are structs, one struct for each
@@ -97,7 +112,7 @@ def projection(proj_dict):
     '''
     # convert proj_dict to df to save with parquet
     # use concat to compensate for diff # of rows in each proj_date_df
-    # pads short cols with null
+    #     this operation pads short cols with null
     # creates col for each key (k)
     
     proj_hist_df = \
@@ -105,36 +120,23 @@ def projection(proj_dict):
             items= [pl.DataFrame({key: value})
                     for key, value in proj_dict.items()],
             how= "horizontal")
-
+    if env.OUTPUT_PROJ_ADDR.exists():
+        move_file_from_to(env.OUTPUT_PROJ_ADDR,
+                      env.BACKUP_PROJ_TEMP_ADDR)
     write_data_file(proj_hist_df, env.OUTPUT_PROJ_ADDR)
-    move_temp_to_backup(env.BACKUP_PROJ_TEMP_ADDR, 
-                        env.BACKUP_PROJ_ADDR)
-    return
-
-
-def archive_sp_input_xlsx(new_files_set):
-    '''
-    Writes sp input xlsx files to archive
-    '''
-    # new_files_set is not empty  
-    for file in new_files_set:
-        address = env.INPUT_DIR / file
-        address.rename(env.ARCHIVE_DIR / file)
-    hp.message([
-        f'Archived all new files from S&P to\n{env.ARCHIVE_DIR}'])
     return
 
 
 def record(record_dict):
     '''
-    Writes updated record_df to json file
-    Writes the previous version of json (from temp) to backup
+        Writes updated record_df to json file
+        Writes the previous version to temp
     '''
+    if env.RECORD_DICT_ADDR.exists():
+        move_file_from_to(env.RECORD_DICT_ADDR, 
+                      env.BACKUP_RECORD_TEMP_ADDR)
     with open(env.RECORD_DICT_ADDR, 'w') as f:
         json.dump(record_dict, f, indent= 4)
-        
-    move_temp_to_backup(env.BACKUP_RECORD_TEMP_ADDR, 
-                        env.BACKUP_RECORD_DICT_ADDR)
     
     hp.message([
         f'Updated:\n {env.RECORD_DICT_ADDR}',
@@ -145,23 +147,84 @@ def record(record_dict):
     return
 
 
-def move_temp_to_backup(temp, backup_addr):
+def archive_sp_input_xlsx(new_files_set):
     '''
-    Moves temporary file to backup file
-    if update_data.py is successful
+        Writes new sp input xlsx files to archive
+        Erases redundant sp input xlsx files
     '''
-    if temp.exists():
-        temp.rename(temp)
+    # new_files_set is not empty
+    for file in new_files_set:
+        address = input_dir / file
+        address.rename(env.ARCHIVE_DIR / file)
     hp.message([
-            f'Moved {temp} to: \n{backup_addr}'
+        f'Archived all new files from S&P to\n{env.ARCHIVE_DIR}'])
+    
+    # erase sp files previously archived
+    # new files removed/renamed above
+    for file in set(str(f.name) for f in 
+                    input_dir.glob(sp_glob_str)):
+        (input_dir / file).unlink()
+    return
+
+
+def write_temp_to_backup():
+    '''
+        Rename temp files to backup files
+    '''
+    if not env.BACKUP_TEMP_DIR.exists():
+        hp.message([
+            'Temporary backup directory does not exist.'
+        ])
+        return
+    
+    hp.message([
+            'Complete update: write temp files to backup'
+        ])
+    for file in env.BACKUP_TEMP_DIR.iterdir():
+        match str(file.name):
+            case env.BACKUP_HIST_TEMP:
+                move_file_from_to(
+                    env.BACKUP_HIST_TEMP_ADDR,
+                    env.BACKUP_HIST_ADDR
+                )
+            case env.BACKUP_IND_TEMP:
+                move_file_from_to(
+                    env.BACKUP_IND_TEMP_ADDR,
+                    env.BACKUP_IND_ADDR
+                )
+            case env.BACKUP_PROJ_TEMP:
+                move_file_from_to(
+                    env.BACKUP_PROJ_TEMP_ADDR,
+                    env.BACKUP_PROJ_ADDR
+                )
+            case env.BACKUP_RECORD_TEMP:
+                move_file_from_to(
+                    env.BACKUP_RECORD_TEMP_ADDR,
+                    env.BACKUP_RECORD_DICT_ADDR
+                )
+    
+    hp.message([
+        f'Files remaining in {
+            str(env.BACKUP_TEMP_DIR.name)}:',
+        f'{[str(f.name) for f in env.BACKUP_TEMP_DIR.iterdir()]}'
+    ])
+    return
+
+
+def move_file_from_to(current, new):
+    '''
+       Renaming deletes original file
+    '''
+    current.rename(new)
+    hp.message([
+            f'Moved: \n{current} \nto: \n{new}'
         ])
     return
 
 
 def write_data_file(df, file_addr):
     '''
-    Updates data file
-    if update_data.py is successful
+        Updates data file with new data
     '''
     with file_addr.open('wb') as f:
         df.write_parquet(f)

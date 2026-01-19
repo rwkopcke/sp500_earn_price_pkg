@@ -3,8 +3,9 @@
         "s&p": "https://www.spglobal.com/spdji/en/search/?query=index+earnings&activeTab=all",
         "tips": "https://fred.stlouisfed.org/series/DFII10"
     },
-    "latest_file": "sp-eps 2025-12-31.xlsx",
+    "latest_file": "sp-eps 2026-01-16.xlsx",
     "prev_used_files": [
+        "sp-eps 2026-01-16.xlsx",
         "sp-eps 2025-12-31.xlsx",
         "sp-eps 2025-09-30.xlsx",
         "sp-eps 2025-06-30.xlsx",
@@ -41,6 +42,7 @@
         "sp-eps 2017-07-05.xlsx"
     ],
     "other_prev_files": [
+        "sp-eps 2026-01-09.xlsx",
         "sp-eps 2025-12-17.xlsx",
         "sp-eps 2025-12-03.xlsx",
         "sp-eps 2025-11-28.xlsx",

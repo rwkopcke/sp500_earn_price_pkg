@@ -25,22 +25,12 @@ def fetch():
                 RECORD_DICT_TEMPLATE
                 from config_paths.py
     '''
-    
-# READ: record_dict
+    # READ: record_dict
     if env.RECORD_DICT_ADDR.exists():
         with open(env.RECORD_DICT_ADDR,'r') as f:
             record_dict = json.load(f)
-            
-# WRITE: temp -- to restore state if necessary
-        with open(env.BACKUP_RECORD_TEMP_ADDR, 'w') as f:
-            json.dump(record_dict, f, indent= 4)
-        hp.message([
-            f'Read record_dict from: \n{env.RECORD_DICT_ADDR}',
-            f'Wrote temp record_dict at: \n{env.BACKUP_RECORD_TEMP_ADDR}'
-        ])
-        
     else:
-        # create record_dict from keys and empty values
+    # create record_dict from keys and empty values
         record_dict = env.RECORD_DICT_TEMPLATE
         hp.message([
             f'No record_dict.json exists at',
@@ -64,18 +54,6 @@ def record_dict(record_dict, input_files_set):
                 contain latest data for each quarter.
                 (other files with new data are archived)
     '''
-    def at_least_1_qtr_before_update_set(date_1, date_2):
-        '''
-            Returns bool
-            True if date_1 is at least 3 months before date_2
-        '''
-        if date_1 >= date_2:
-            return False
-        if date_1[0:4] < date_2[0:4]:
-            return True
-        if  3 <= (int(date_2[6:8]) - int(date_1[6:8])):
-            return True
-        return False
 # CREATE sets of file names
 # below, partition new_files_set: files to read & to archive
     prev_used_files_set = set(record_dict['prev_used_files'])
@@ -99,14 +77,14 @@ def record_dict(record_dict, input_files_set):
          if at_least_1_qtr_before_update_set(
              file[7:11], min(new_files_set)[7:11])}
     
-    # files to be sorted into "used" and "other"
-    mod_used_files_list = list(
+    # candidates for the used_files collection to be analyzed
+    work_files_list = list(
         new_files_set | 
         (prev_used_files_set - stable_used_files_set)
     )
     
-# patition mod_used_files into "used" and "other"
-    data_df = pl.DataFrame(mod_used_files_list,
+# patition work_files into "used" and "other"
+    data_df = pl.DataFrame(work_files_list,
                             schema= ['file'],
                             orient= 'row')\
                 .with_columns(pl.col.file
@@ -126,21 +104,21 @@ def record_dict(record_dict, input_files_set):
     #   agg(pl.all().sort_by('date').last() -- ascending sort_by()
     # in each group, sort_by date, select the last row
         
-    # new "used" from the filtered "mod" list ...
+    # new "used" from the filtered "work" list ...
     new_used_files_set = set(data_df['file'])
     used_files_set = \
         new_used_files_set | stable_used_files_set
     # all other files are "other"
-    other_files_set = (
-        set(record_dict['other_prev_files']) |
-        (set(mod_used_files_list) - new_used_files_set))
+    #other_files_set = (
+    #    set(record_dict['other_prev_files']) |
+    #    (set(mod_used_files_list) - new_used_files_set))
     
     files_to_read_set = \
         new_files_set & new_used_files_set
                        
 # UPDATE record_dict
-    used_files_list = sorted(list(used_files_set),
-                             reverse= True)
+    used_files_list = \
+        sorted(list(used_files_set), reverse= True)
     record_dict['prev_used_files'] = used_files_list
     record_dict['latest_file'] = used_files_list[0]
     record_dict['other_prev_files'] = sorted(
@@ -149,4 +127,18 @@ def record_dict(record_dict, input_files_set):
     )
     
     return [record_dict, new_files_set, files_to_read_set]
+
+
+def at_least_1_qtr_before_update_set(date_1, date_2):
+        '''
+            Returns bool
+            True if date_1 is at least 3 months before date_2
+        '''
+        if date_1 >= date_2:
+            return False
+        if date_1[0:4] < date_2[0:4]:
+            return True
+        if  3 <= (int(date_2[6:8]) - int(date_1[6:8])):
+            return True
+        return False
     

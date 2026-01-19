@@ -54,7 +54,7 @@ class Fixed_locations:
     # partial templates for file names
     FILE_INPUT_WKBK_PREFIX = 'sp-'
     INPUT_SP_FILE_GLOB_STR = f'{FILE_INPUT_WKBK_PREFIX}*.xlsx'
-    FILE_OUTPUT_WKBK_PREFIX = 'sp-eps'
+    FILE_OUTPUT_WKBK_PREFIX = f'{FILE_INPUT_WKBK_PREFIX}eps'
     
 ## ====================================================================
 ## ========== Set paths and addr within proj's dir ====================
@@ -89,22 +89,27 @@ class Fixed_locations:
     OUTPUT_PROJ_ADDR = OUTPUT_DIR / OUTPUT_PROJ_FILE
 
     BACKUP_DIR = INPUT_OUTPUT_DIR / 'backup_dir'
+    BACKUP_TEMP_DIR = BACKUP_DIR / 'temp_dir'
     
     BACKUP_HIST_FILE = "backup_pe_df_actuals.parquet"
     BACKUP_HIST_ADDR = BACKUP_DIR / BACKUP_HIST_FILE
-    BACKUP_HIST_TEMP_ADDR = BACKUP_DIR / "temp_actuals.parquet"
+    BACKUP_HIST_TEMP = "temp_actuals.parquet"
+    BACKUP_HIST_TEMP_ADDR = BACKUP_TEMP_DIR / BACKUP_HIST_TEMP
     
     BACKUP_IND_FILE  = "backup_ind_df.parquet"
     BACKUP_IND_ADDR  = BACKUP_DIR / BACKUP_IND_FILE
-    BACKUP_IND_TEMP_ADDR = BACKUP_DIR / "temp_ind.parquet"
+    BACKUP_IND_TEMP  = "temp_ind.parquet"
+    BACKUP_IND_TEMP_ADDR = BACKUP_TEMP_DIR / BACKUP_IND_TEMP
     
     BACKUP_PROJ_FILE  = "backup_pe_estimates_df.parquet"
     BACKUP_PROJ_ADDR  = BACKUP_DIR / BACKUP_PROJ_FILE
-    BACKUP_PROJ_TEMP_ADDR = BACKUP_DIR / "temp_proj.parquet"
+    BACKUP_PROJ_TEMP  = "temp_proj.parquet"
+    BACKUP_PROJ_TEMP_ADDR = BACKUP_TEMP_DIR / BACKUP_PROJ_TEMP
     
     BACKUP_RECORD_DICT = "backup_record_dict.json"
     BACKUP_RECORD_DICT_ADDR = BACKUP_DIR / BACKUP_RECORD_DICT
-    BACKUP_RECORD_TEMP_ADDR = BACKUP_DIR /  "temp_record.json"
+    BACKUP_RECORD_TEMP =  "temp_record.json"
+    BACKUP_RECORD_TEMP_ADDR = BACKUP_TEMP_DIR / BACKUP_RECORD_TEMP
 
     DISPLAY_DIR = INPUT_OUTPUT_DIR / "display_dir"
     DISPLAY_0 = 'eps_page0.pdf'

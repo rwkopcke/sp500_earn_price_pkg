@@ -1,3 +1,10 @@
+'''
+    CLI: Entry point for package
+        uv run earn-price
+    Allows user to select an action
+        explained in main() below
+'''
+
 import sys
 from types import MappingProxyType
 

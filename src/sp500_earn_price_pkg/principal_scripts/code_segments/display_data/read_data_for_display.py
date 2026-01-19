@@ -21,7 +21,7 @@ def history(record_dict):
     #yr_qtr_set = set(hp.date_to_year_qtr(list_).to_list())
     
     if env.OUTPUT_HIST_ADDR.exists():
-        with env.OUTPUT_HIST_ADDR.open('r') as f:
+        with env.OUTPUT_HIST_ADDR.open('rb') as f:
             data_df = pl.read_parquet(source= f,
                                       columns= disp.HIST_COL_NAMES)
         hp.message([
@@ -41,13 +41,13 @@ def history(record_dict):
 def projection():
     proj_df = pl.DataFrame()
     if env.OUTPUT_PROJ_ADDR.exists():
-        with env.OUTPUT_PROJ_ADDR.open('r') as f:
+        with env.OUTPUT_PROJ_ADDR.open('rb') as f:
             proj_df = pl.read_parquet(source= f)
         
     if not proj_df.is_empty():
         hp.message([
-            f'Read projection dataframe',
-            f'at \n{env.OUTPUT_PROJ_ADDR}'
+            f'Read projection dataframe at:',
+            f'{env.OUTPUT_PROJ_ADDR}'
         ])
         
         

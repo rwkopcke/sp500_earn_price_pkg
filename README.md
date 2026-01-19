@@ -258,8 +258,16 @@ sp500-earn-price-pkg v2.0.0
 
 
 #### Future improvements\
+- Add .copy() from pathlib to replace .rename
+- Consider changing os.excepthook
+    - perhaps run subprocess to restore any temp files before halting
+- Add comparisons of 500 to 400, 600, 1500
+    - Shares of total earnings
+    - EP ratios, both for index and for industries within
+    - Correlations
+    - Industry (using op_e) mix, comparative bar charts
 - Tidy the logic/code in the scripts
-- Improve docstrings
-- Add 1-yr cm TIPS rate
+- Improve docstrings (incremental)
+- Add 1-yr cm TIPS rate ???? (low priority, if at all)
     - add new page of equity premiums using 1-yr TIPS & projected E/P
 - Convert the data structure from polars dataframes to duckdb or ... 

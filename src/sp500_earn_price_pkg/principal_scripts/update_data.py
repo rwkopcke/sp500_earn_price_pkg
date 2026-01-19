@@ -1,27 +1,20 @@
-'''This program reads selected data from S&P, sp-500-eps-est.xlsx
-        https://www.spglobal.com/spdji/en/search/?query=index+earnings&activeTab=all
-   and from the 10-year TIPS rate from FRED: 
-        https://fred.stlouisfed.org/series/DFII10
-   It writes these data as polars dataframes to .parquet files
-        and writes a record of the files that it has writen
-        as a dictionary to a .json file
+'''
+    This program reads selected data from S&P
+    and from the 10-year TIPS rate from FRED
+    It creates polars dataframes, which it writes to .parquet files
+    It creates a record of its transactions as a dict, 
+        which it writes to a .json file
         
-   see config_paths.py
+    see config_paths.py
         for the addresses of the files within this project are declared
         for advice in resetting paths for debugging and for reinitializing
         the project's output files
 
-   The polars dataframes in input_output
-        the latest projections of earnings for the
-        S&P500 within each quarter since late 2017. 
-   A separate polars dataframe contains
-        the actual earnings and the value of the index for each quarter 
-        beginning in 1988. This dataframe also contains actual values for 
-        operating margins, revenues, book values, dividends, and other 
-        actual data reported by S&P, plus actual values for the 10-year TIPS.
-   
-   The addresses of documents for this project appear in this program's 
-   project directory: S&P500_PE/sp500_pe/config_paths.py
+    The polars dataframes in input_output/output contain
+        historical data, 
+        projections of earnings, and
+        earnings and price data by industry 
+    See the README file for this project
 '''
 import polars as pl
 import polars.selectors as cs
@@ -32,13 +25,12 @@ from sp500_earn_price_pkg.principal_scripts.code_segments.update_data \
 from sp500_earn_price_pkg.helper_func_module import helper_func as hp
 from sp500_earn_price_pkg.principal_scripts.code_segments.update_data \
     import read_data as read
+# contains all scripts that write to files
 from sp500_earn_price_pkg.principal_scripts.code_segments.update_data \
     import write_data_to_files as write
 
 import config.config_paths as config
 import config.set_params as params
-
-# https://blog.dailydoseofds.com/p/how-to-simplify-python-imports-with
 
 env = config.Fixed_locations
 param = params.Update_param
@@ -47,24 +39,22 @@ date = param.DATE_NAME
 yr_qtr = param.YR_QTR_NAME
 year = param.ANNUAL_DATE
 
+
 def update():
     ''' Check Input files from S&P and Fred for new data
         Insert any new data into existing history
-        Write the updates to
+        Write the new data, as appropriate, to
             sp500_pe_df_actuals.parquet
             sp500_pe_df_estimates.parquet
             sp500_ind_df.parquet
         Record these transactions in
             record_dict.json
-            
-        config.Fixed_locations(): paraneters from config_paths.py
     '''
     
 ## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## +++++  ensure sp input files exist and are named consistently  +++++++++
 ## +++++   format of std name: sp-500-eps DATE_FMT_SP_FILE    +++++++++++++
 ## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
     sp_input_files_set = read.verify_valid_input_files()
     
     if not sp_input_files_set:
@@ -72,15 +62,21 @@ def update():
             'no valid input files, see messages above'
             ])
         return  #back to entry.py
+    else:
+        hp.message([
+            f'New input files verified: \n{sp_input_files_set}'
+        ])
     
-    # not sorted
     sp_input_files_set = \
         read.ensure_consistent_file_names(sp_input_files_set)
+        
+    hp.message([
+            f'New files for processing: \n{sp_input_files_set}'
+        ])
         
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++              
 ## +++++  update record_dict for new files  ++++++++++++++++++++++++++++++++
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
     # fetch record_dict - if record_dist is None, create it
     record_dict = update_record.fetch()
          
@@ -93,7 +89,7 @@ def update():
             'No new input files',
             'Stop Update and return to menu of actions'
         ])
-        write.restore_from_temp_files(location=
+        write.restore_data_stop_update(location=
             "update_data.py() update record dict for new files",
             exit= False)
         return  #back to entry.py
@@ -101,8 +97,8 @@ def update():
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++              
 ## +++++  update historical aggregate data  +++++++++++++++++++++++++++++++++
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-
-    latest_file = record_dict["latest_file"]
+    latest_file = record_dict['latest_file']
+    
     hp.message([
         f'Update historical data from: {latest_file}',
         f'in directory: \n{env.INPUT_DIR}'
@@ -179,7 +175,6 @@ def update():
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## +++++  fetch & update historical industry data  +++++++++++++++++++++++++++
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
     # read stored data
     ind_df = read.industry_data()
     
@@ -227,10 +222,9 @@ def update():
 ## +++++++++++++++++ fetch projections  ++++++++++++++++++++++++++++++++++++
 ## ++++++++++++ proj_dict: {yr_qtr: df of proj}  +++++++++++++++++++++++++++
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
     # fetch history
     proj_dict = read.projection_data()
-    
+
     # Fetch files_to_read from inputs
     # Update proj_dict with info in files_to_read
     # use proj of earnings for latest input file in each yr_qtr
@@ -262,7 +256,7 @@ def update():
         f'\t{n} files not read:',
         f'\t{failure_to_read_lst}'
     ])
-    
+
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## +++++ write dfs to parquet, record to json, temp files to backups +++++++
 ## ++++++++++ archive s&pinput files  +++++++++++++++++++++++++++++++++++++
@@ -271,7 +265,8 @@ def update():
     write.history(actual_df)
     write.industry(ind_df)
     write.projection(proj_dict)
-    write.archive_sp_input_xlsx(new_files_set)
     write.record(record_dict)
-    
+    write.archive_sp_input_xlsx(new_files_set)
+    # tidy the temp files and verify backup is empty
+    write.write_temp_to_backup()
     return
