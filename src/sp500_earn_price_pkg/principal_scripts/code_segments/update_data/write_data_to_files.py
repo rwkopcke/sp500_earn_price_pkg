@@ -14,7 +14,7 @@ sp_glob_str = env.INPUT_SP_FILE_GLOB_STR
 
 
 def restore_data_stop_update(location= "missing", 
-                               exit= True):
+                             exit= True):
     '''
     Restores original parquet files and record_dict.json
         .rename() removes TEMP files
@@ -22,8 +22,11 @@ def restore_data_stop_update(location= "missing",
     Otherwise return to processing
     '''
     hp.message([
-            f'At:\n{location} stopped update'
+            f'At {location}: processing was halted',
+            'Data in any TEMP files have been restored to original files',
+            'See the following messages'
         ])
+    
     if not env.BACKUP_TEMP_DIR.exists():
         hp.message([
             'No data files restored because'
