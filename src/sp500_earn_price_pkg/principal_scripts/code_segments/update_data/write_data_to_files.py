@@ -162,11 +162,26 @@ def archive_sp_input_xlsx(new_files_set):
     hp.message([
         f'Archived all new files from S&P to\n{env.ARCHIVE_DIR}'])
     
-    # erase sp files previously archived
-    # new files removed/renamed above
-    for file in set(str(f.name) for f in 
-                    input_dir.glob(sp_glob_str)):
-        (input_dir / file).unlink()
+    # any remaining files in input_dir are stale
+    purge_files()
+    
+    return
+
+
+def purge_files(dir= env.INPUT_DIR, 
+                glob_str= env.INPUT_SP_FILE_GLOB_STR):
+    '''
+        In input_dir, or other specified dir
+        erase sp input files, or 
+            other files with the pattern in glob_str
+    '''
+    '''
+    for file in [str(f.name) 
+                 for f in dir.glob(glob_str)]:
+        (dir / file).unlink()
+    '''
+    for f in dir.glob(glob_str):
+        f.unlink()
     return
 
 

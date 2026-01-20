@@ -89,9 +89,14 @@ def update():
             'No new input files',
             'Stop Update and return to menu of actions'
         ])
+        '''
+        # the parquet and json files have not been altered at this point
         write.restore_data_stop_update(location=
             "update_data.py() update record dict for new files",
             exit= False)
+        '''
+        write.purge_files(env.INPUT_DIR, 
+                          env.INPUT_SP_FILE_GLOB_STR)
         return  #back to entry.py
 
 ## +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++              

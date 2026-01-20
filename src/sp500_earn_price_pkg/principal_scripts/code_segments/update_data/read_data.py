@@ -31,6 +31,8 @@ index = param.IDX_E_COL_NAME
 index_type = param.IDX_TYPE_COL_NAME
 earnings_type = param.E_TYPE_COL_NAME
 earnings_metric = param.E_METRIC_COL_NAME
+
+input_dir = env.INPUT_DIR
     
     
 def verify_valid_input_files():
@@ -42,7 +44,6 @@ def verify_valid_input_files():
         If true, returns set of sp files 
         if false, returns empty set
     '''
-    input_dir = env.INPUT_DIR
     sp_glob_str = env.INPUT_SP_FILE_GLOB_STR
     
     if not input_dir.exists():
@@ -92,7 +93,6 @@ def ensure_consistent_file_names(names_set):
             names: date in file name is date of projection; one
             file per projection date.
     '''
-    input_dir = env.INPUT_DIR
     # limit # of rows to read in WKBK_DATE_COL
     max = param.MAX_DATE_ROWS
     date_col = param.WKBK_DATE_COL
