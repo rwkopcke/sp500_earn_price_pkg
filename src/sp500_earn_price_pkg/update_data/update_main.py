@@ -16,17 +16,20 @@
         earnings and price data by industry 
     See the README file for this project
 '''
+import sys
+
 import polars as pl
 import polars.selectors as cs
 
-from sp500_earn_price_pkg.principal_scripts.code_segments.update_data \
+from sp500_earn_price_pkg.update_data \
     import update_record
 
-from sp500_earn_price_pkg.helper_func_module import helper_func as hp
-from sp500_earn_price_pkg.principal_scripts.code_segments.update_data \
+from sp500_earn_price_pkg.helper_func \
+    import helper_func as hp
+from sp500_earn_price_pkg.update_data \
     import read_data as read
 # contains all scripts that write to files
-from sp500_earn_price_pkg.principal_scripts.code_segments.update_data \
+from sp500_earn_price_pkg.update_data \
     import write_data_to_files as write
 
 import config.config_paths as config
@@ -39,6 +42,19 @@ date = param.DATE_NAME
 yr_qtr = param.YR_QTR_NAME
 year = param.ANNUAL_DATE
 
+# set custom error handler
+def update_data_excepthook(exctype, value, traceback):
+    '''
+        Before reporting the exception in standard format,
+        Rename (restore) any temp files back to original names
+    '''
+    write.restore_data_stop_update(location= "excepthook",
+                                   exit= False)
+    if exctype == KeyboardInterrupt:
+        print("Process interrupted by keyboard command.")
+    else:
+        sys.__excepthook__(exctype, value, traceback)
+
 
 def update():
     ''' Check Input files from S&P and Fred for new data
@@ -50,6 +66,8 @@ def update():
         Record these transactions in
             record_dict.json
     '''
+    
+    sys.excepthook = update_data_excepthook
     
 ## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## +++++  ensure sp input files exist and are named consistently  +++++++++

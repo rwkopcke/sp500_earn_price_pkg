@@ -7,7 +7,7 @@ import polars.selectors as cs
 import config.config_paths as config
 import config.set_params as params
 
-from sp500_earn_price_pkg.helper_func_module \
+from sp500_earn_price_pkg.helper_func \
     import helper_func as hp
 
 env = config.Fixed_locations

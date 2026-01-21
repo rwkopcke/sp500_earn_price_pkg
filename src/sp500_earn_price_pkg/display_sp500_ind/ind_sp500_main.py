@@ -1,12 +1,15 @@
+import sys
+
 import polars as pl
 import matplotlib.pyplot as plt
 import seaborn as sn
 import numpy as np
 
-from sp500_earn_price_pkg.principal_scripts.code_segments.display_ind \
-    import read_ind_for_display
+from sp500_earn_price_pkg.display_sp500_ind \
+    import read_ind_sp500 as read
     
-from sp500_earn_price_pkg.helper_func_module import helper_func as hp
+from sp500_earn_price_pkg.helper_func \
+    import helper_func as hp
     
 import config.config_paths as config
 import config.set_params as params
@@ -19,9 +22,28 @@ year = param.ANNUAL_DATE
 earnings_metric = param.E_METRIC_COL_NAME
 earnings_type = param.E_TYPE_COL_NAME
 
+'''
+# set custom error handler
+def ind_sp500_excepthook(exctype, value, traceback):
+    ''
+        Before reporting the exception in standard format,
+        Rename (restore) any temp files back to original names
+    ''
+    write.restore_data_stop_update(location= "excepthook",
+                                   exit= False)
+    if exctype == KeyboardInterrupt:
+        print("Process interrupted by keyboard command.")
+    else:
+        sys.__excepthook__(exctype, value, traceback)
+'''
+
 
 def display_ind():
-    ind_df = read_ind_for_display.read()
+    
+    
+    #sys.excepthook = ind_sp500_excepthook
+    
+    ind_df = read.read()
     
 # SEABORN SCATTERPLOTS WITH JITTER +++++++++++++++++++++++++++++++++
 # https://matplotlib.org/stable/users/explain/axes/constrainedlayout_guide.html#sphx-glr-users-explain-axes-constrainedlayout-guide-py

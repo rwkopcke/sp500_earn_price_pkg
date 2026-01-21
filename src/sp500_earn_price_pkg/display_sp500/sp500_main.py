@@ -5,17 +5,20 @@
    The addresses of documents within this project appear in this program's 
    paths.py script
 '''
+import sys
 
 import polars as pl
 import matplotlib.pyplot as plt
 
-from sp500_earn_price_pkg.principal_scripts.code_segments.display_data \
-    import read_data_for_display as read
-from sp500_earn_price_pkg.principal_scripts.code_segments.display_data \
-    import plot_func as pf
+from sp500_earn_price_pkg.display_sp500 \
+    import read_sp500_for_display as read
+from sp500_earn_price_pkg.display_sp500\
+    import plot_sp500 as pf
     
-from sp500_earn_price_pkg.helper_func_module import display_helper_func as dh
-from sp500_earn_price_pkg.helper_func_module import helper_func as hp
+from sp500_earn_price_pkg.helper_func \
+    import display_helper_func as dh
+from sp500_earn_price_pkg.helper_func \
+    import helper_func as hp
     
 import config.config_paths as config
 import config.set_params as params
@@ -37,8 +40,25 @@ r_rate = param.RR_COL_NAME
 # https://docs.pola.rs/py-polars/html/reference/dataframe/api/polars.DataFrame.filter.html
 # https://fralfaro.github.io/DS-Cheat-Sheets/examples/polars/polars/
 
+'''
+# set custom error handler
+def sp500_excepthook(exctype, value, traceback):
+    ''
+        Before reporting the exception in standard format,
+        Rename (restore) any temp files back to original names
+    ''
+    write.restore_data_stop_update(location= "excepthook",
+                                   exit= False)
+    if exctype == KeyboardInterrupt:
+        print("Process interrupted by keyboard command.")
+    else:
+        sys.__excepthook__(exctype, value, traceback)
+'''
+
 
 def display():
+    
+    #sys.excepthook = sp500_excepthook
     
 ## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## +++++++++ Read record_dict, history, proj_dict +++++++++++++++++++++

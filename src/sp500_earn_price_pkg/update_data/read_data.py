@@ -10,9 +10,9 @@ import openpyxl.utils.cell as ut_cell
 import polars as pl
 import polars.selectors as cs
 
-from sp500_earn_price_pkg.helper_func_module \
+from sp500_earn_price_pkg.helper_func \
     import helper_func as hp
-from sp500_earn_price_pkg.principal_scripts.code_segments.update_data \
+from sp500_earn_price_pkg.update_data \
     import write_data_to_files as write
     
 import config.config_paths as config
