@@ -231,6 +231,7 @@ sp500-earn-price-pkg v2.0.0
 4. uncaught runtime exceptions
     - are handled by custom hooks that override ```sys.excepthook```
     - each action has its own excepthook defined in its *_main.py 
+    - uncaught exceptions for update_data restore parquet file and record_dict before processing quits
 <br>
 <br>
 
@@ -272,10 +273,7 @@ sp500-earn-price-pkg v2.0.0
     - after reinitialization, reset INPUT_DIR 
 
 
-#### Future improvements\
-- Add .copy() from pathlib to replace .rename
-- Consider changing os.excepthook
-    - perhaps run subprocess to restore any temp files before halting
+#### Future improvements
 - Add comparisons of 500 to 400, 600, 1500
     - Shares of total earnings
     - EP ratios, both for index and for industries within
