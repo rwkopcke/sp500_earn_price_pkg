@@ -1,5 +1,5 @@
 '''
-    CLI: Entry point for package
+    CLI entry point for package
         uv run earn-price
     Allows user to select an action
         explained in main() below

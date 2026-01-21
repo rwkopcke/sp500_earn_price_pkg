@@ -10,7 +10,17 @@
 - earnings and prices for the S&P's industries
 - earnings and prices for S&P 400, 600, and 1500 indexes
 
-### update_data.py
+```
+# navigate to the project's "outer folder" which contains 
+#   pyproject.toml, uv.lock, src/ ...
+#   see the Project File Tree below
+
+cd /.../sp500-earn-price-pkg
+uv run earn-price
+```
+### This CLI command then allows the user to run:
+
+### update_data
 - maintains files containing quarterly data
 - observations are for the last available date in each quarter
 - reads new data from .xlsx workbooks in input_dir/
@@ -19,7 +29,7 @@
 - writes json and parquet files to output_dir/
 - archives the workbooks from input_dir/
 
-### display_data.py
+### display_sp500
 - reads sp500_pe_df_actuals.parquet in output_dir/
 - reads the files in output_dir/estimates/
 - produces pdf documents in display_dir/
@@ -29,7 +39,7 @@
     - page2: margin and equity premium using trailing earnings
     - page3: equity premium using projected earnings
 
-### display_ind_data.py
+### display_sp500_ind
 - reads sp500_ind_df.parquet in output_dir/
 - produces pdf documents in display_dir/
 - presents annual data, 2008 through the present
@@ -37,7 +47,7 @@
     - page5: correlation heatmap for industries' operating P/Es
     - page6: distribution of industries' operating earnings
 
-### display_sp_idx_data.py
+### display_sp_indexes
 - TODO
 - x
 
@@ -77,7 +87,7 @@ build-backend = "hatchling.build"
 
 #### Dependencies Tree:
 ```     
-... /sp500_earn_price_pkg % uv tree
+... /sp500-earn-price-pkg % uv tree
 sp500-earn-price-pkg v2.0.0
 ├── matplotlib v3.10.6
 │   ├── contourpy v1.3.3
@@ -111,12 +121,13 @@ sp500-earn-price-pkg v2.0.0
 
 #### Project File Tree:
 
-... /sp500_earn_price_pkg % tree
+... /sp500-earn-price-pkg % tree
 ```
 .
-├── environment.json
+├├── environment.json
 ├── input_output
 │   ├── backup_dir
+│   │   └── temp_dir
 │   ├── display_dir
 │   │   ├── eps_page0.pdf
 │   │   ├── eps_page1.pdf
@@ -127,7 +138,7 @@ sp500-earn-price-pkg v2.0.0
 │   │   └── eps_page6.pdf
 │   ├── input_dir
 │   │   └── DFII10.xlsx
-|   |   |__ sp-eps 2025-12-31.xlsx (example sp file)
+|   |   |__ sp-*.xlsx
 │   ├── output_dir
 │   │   ├── sp500_ind_df.parquet
 │   │   ├── sp500_pe_df_actuals.parquet
@@ -142,32 +153,30 @@ sp500-earn-price-pkg v2.0.0
 │   │   └── set_params.py
 │   └── sp500_earn_price_pkg
 │       ├── __init__.py
+│       ├── display_sp_indexes
+│       │   ├── __init__.py
+│       │   └── sp_indexes_main.py
+│       ├── display_sp500
+│       │   ├── __init__.py
+│       │   ├── plot_sp500.py
+│       │   ├── read_sp500_for_display.py
+│       │   └── sp500_main.py
+│       ├── display_sp500_ind
+│       │   ├── __init__.py
+│       │   ├── ind_sp500_main.py
+│       │   ├── plot_ind_sp500.py
+│       │   └── read_ind_sp500.py
 │       ├── entry.py
-│       ├── helper_func_module
+│       ├── helper_func
 │       │   ├── __init__.py
 │       │   ├── display_helper_func.py
 │       │   └── helper_func.py
-│       └── principal_scripts
+│       └── update_data
 │           ├── __init__.py
-│           ├── code_segments
-│           │   ├── __init__.py
-│           │   ├── display_data
-│           │   │   ├── __init__.py
-│           │   │   ├── plot_func.py
-│           │   │   └── read_data_for_display.py
-│           │   ├── display_ind
-│           │   │   ├── __init__.py
-│           │   │   ├── plot_ind_func.py
-│           │   │   └── read_ind_for_display.py
-│           │   └── update_data
-│           │       ├── __init__.py
-│           │       ├── read_data.py
-│           │       ├── update_record.py
-│           │       └── write_data_to_files.py
-│           ├── display_data.py
-│           ├── display_ind_data.py
-│           ├── display_other_sp_indexes.py
-│           └── update_data.py
+│           ├── read_data.py
+│           ├── update_main.py
+│           ├── update_record.py
+│           └── write_data_to_files.py
 └── uv.lock
 
 ```
@@ -175,19 +184,18 @@ sp500-earn-price-pkg v2.0.0
 <br>
 
 ## Instructions
-0. In .../sp500_earn_price_pkg/environment.json:
-    - key "archive_path": required value "*absolute address for archive directory*"
+0. In .../sp500-earn-price-pkg/environment.json:
+    - key "archive_path": **required value** "*absolute address for archive directory*"
     - key "sp_source": optional value "*web address for SP's EPSEST xlsx*"
     - key "real_rate_source": optional value "*web address for FRED's DFII10*"
-    - key ""rate_of_growth_of_sp_index": optional decimal value, defaults to 0.05, example annual rate of growth of stock prices during quarters of projected E, used only for page 1.
+    - key "rate_of_growth_of_sp_index": optional decimal value, defaults to 0.05, example annual rate of growth of stock prices during quarters of projected E, used only for page 1.
 
 1. Put new .xlsx from S&P into input_dir/    (S&P's id: EPSEST)
     - https://www.spglobal.com/spdji/en/search/?query=index+earnings&activeTab=all
-    - rename: sp-500-eps-est YYYY MM DD.xlsx
     - first three characters of sp input file must be "sp-"
     - last four characters of sp input file must be ".xlsx" (see tree above)
     
-2. Put new data from FRED into input_dir/  (FRED's id: DFII10)
+2. Put new data from FRED into input_dir/DFII10.xlsx  (FRED's id: DFII10)
     - https://fred.stlouisfed.org/series/DFII10/chart
     - In DFII10.xlsx, add real interest rates for dates that match SP's new file dates
     - Name of FRED file must be "DFII10.xlsx"  (see tree above)
@@ -195,9 +203,8 @@ sp500-earn-price-pkg v2.0.0
         - quarter-end 10-year TIPS rates for full period of sp files
         - TIPS 10-year rate for the date of most recent sp file
 
-3. From sp500_earn_price_pkg top level: ```uv run earn-price```
-
-    - action 0: update_data.py
+3. ```uv run earn-price```
+    - action 0: update_data
         - reads files in input_dir/
         - moves input files to archive
         - writes the existing record_dict.json to backup_dir/
@@ -208,36 +215,41 @@ sp500-earn-price-pkg v2.0.0
         - writes new sp500_ind_df.parquet to output_dir/
         - writes new sp500_pe_df_estimates.parquet to output_dir/
 
-    - action 1: display_data.py
+    - action 1: display_sp500
         - reads record_dict.json
         - reads sp500_pe_df_actuals.parquet file in output_dir/
         - reads sp-500-eps-est yyyy-mm-dd.parquet files in estimates/
         - writes pdf pages to display_dir/
 
-    - action 2: display_ind_data.py
+    - action 2: display_sp500_ind
         - reads files in output_dir/
         - reads sp500_ind_df.parquet file in output_dir/
         - writes pdf pages to display_dir/
     
-    - action 3: TODO
+    - action 3: display_sp_indexes
+
+4. uncaught runtime exceptions
+    - are handled by custom hooks that override ```sys.excepthook```
+    - each action has its own excepthook defined in its *_main.py 
 <br>
 <br>
 
 ## Other Information
-### sp500_earn_price_pkg/config/config_paths.py
+### sp500-earn-price-pkg/config/config_paths.py
 -  Reads absolute address of ARCHIVE_DIR from ```/sp500_earn_price_pkg/environment.json```
     - user must specify location of ARCHIVE_DIR to store input files after they have been read
 -  Contains addresses for all other files relative to the address of the top-level project file
     - abs addr of top-level sp500_earn_price_pkg/ is the root for addrs of all folders and files (except the ARCHIVE_DIR)
 
-### output_dir/
-#### sp-500-eps-est YYYY MM DD.parquet
+### sp500-earn-price-pkg/input_output/
+#### output_dir/sp500_pe_df_estimates.parquet
 - polars dataframe with projected earnings
-- from sp-500-eps-est YYYY MM DD.xlsx
-- uses files with the latest date for each quarter
-#### sp500_pe_df_actuals.parquet
-- one polars dataframe for all historical data
-- updated from new input data
+- uses estimates for the latest date for each quarter
+#### output_dir/sp500_pe_df_actuals.parquet
+- polars dataframe for all historical data
+#### output_dir/sp500_ind_df.parquet
+- polars dataframe with annual earnings and pe ratios for 11 ind segments
+- data for the sp400, sp500, sp600, and sp1500
 ### record_dict.json
 - records all data files read and written
 - records which files have been used
@@ -246,11 +258,14 @@ sp500-earn-price-pkg v2.0.0
 <br>
 
 #### To recreate/reinitialize output files from all archived history
-1. see src/sp500_earn_price_pkg/config/config_paths.py
+1. see ```src/sp500_earn_price_pkg/config/config_paths.py```
 2. debug
     - ensure that updated DFII10.xlsx is in INPUT_DIR
-    - move the most recent input file from ARCHIVE_DIR to INPUT_DIR
-    - remove the name of the most recent input file from all keys in record_dict.json
+    - move input files to be reread from ARCHIVE_DIR to INPUT_DIR
+    - remove the input files to read from the current record_dict.json
+        - "latest_file"
+        - "prev_used_files"
+        - "other_prev_files"
 3. reinitialize
     - ensure that DFII10.xlsx in INPUT_DIR has data for all quarters
     - in config_paths.py set INPUT_DIR = ARCHIVE_DIR
